@@ -7,6 +7,7 @@ from tkinter import ttk
 from Pmw import Balloon
 from datetime import datetime
 from puresnmp import walk, get
+import sys
 
 class MainApplication(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
