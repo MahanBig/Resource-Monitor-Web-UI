@@ -16,6 +16,20 @@ document.addEventListener("DOMContentLoaded", function () {
                         </div>
                     `;
         };
+        const hasWarning = printer.Errors.some(
+          (error) =>
+            error.includes("{13300}") ||
+            error.includes("{13400}")
+        );
+        const hasCriticalError = printer.Errors.some(
+          (error) =>
+            error.includes("{10033}")
+        );
+        if (hasCriticalError) {
+          printerDiv.classList.add("pulsate-error");
+        }; if (hasWarning) {
+          printerDiv.classList.add("pulsate-warning");
+        };
 
         // Skipping the second ink level as it is unknown
         const inkLevelsHtml = `
@@ -56,7 +70,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             <strong>Tray Paper Count:</strong>
                             ${trayCountersHtml}
                         </div>
-                        <ul class="errors-list"><strong>Errors:</strong> ${printer.Errors.map(
+                        <ul class="errors-list"><strong>Status:</strong> ${printer.Errors.map(
                           (error) => `<li class="error">${error}</li>`
                         ).join("")}</ul>
                     </div>
