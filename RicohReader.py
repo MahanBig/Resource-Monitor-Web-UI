@@ -8,8 +8,70 @@ from Pmw import Balloon
 from datetime import datetime
 from puresnmp import walk, get
 import sys
+import json
+
+MainnTable = []
 
 class MainApplication(tk.Frame):
+    # Existing __init__ method here...
+
+    def export_to_json(self):
+        printer_data = []
+        for printer in self.printers:
+            printer_info = {
+                "IP": printer["IP"],
+                "Name": printer["Name"],
+                "Serial": printer["Serial"],
+                "EID": printer["EID"],
+                "Default": printer["Default"]
+            }
+            
+            # SNMP fetch model
+            try:
+                model = get(printer['IP'], 'public', self.model_OID).decode('utf-8')
+            except Exception as e:
+                model = "Error fetching model"
+            
+            # SNMP fetch ink levels
+            try:
+                ink_levels = []
+                for item in walk(printer['IP'], 'public', self.ink_levels_base_OID):
+                    if item:  # Skipping waste toner for simplicity
+                        ink_levels.append(str(item[1]) + '%')
+            except Exception as e:
+                ink_levels = ["Error fetching ink levels"]
+            
+            # SNMP fetch tray information (simplified)
+            try:
+                tray_info = []
+                for item in walk(printer['IP'], 'public', self.tray_current_capacity_base_OID):
+                    tray_info.append(str(item[1]))
+            except Exception as e:
+                tray_info = ["Error fetching tray information"]
+            
+            # SNMP fetch errors
+            try:
+                errors = []
+                for item in walk(printer['IP'], 'public', self.error_base_OID):
+                    errors.append(item[1].decode('utf-8'))
+            except Exception as e:
+                errors = ["Error fetching errors"]
+            
+            printer_info.update({
+                "Model": model,
+                "Ink Levels": ink_levels,
+                "Tray Information": tray_info,
+                "Errors": errors
+            })
+            
+            printer_data.append(printer_info)
+        
+        file_path = 'printer_data.json'
+        with open(file_path, 'w') as json_file:
+            json.dump(printer_data, json_file, indent=4)
+
+        print(f"Data exported to {file_path} successfully.")
+
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
@@ -228,6 +290,12 @@ class SelectionPane(tk.Frame):
         #Define variables for variable refresh
         self.active_ID = None
         self.time_input = None
+
+        self.export_button = tk.Button(self, text='Export JSON', command=self.export_data)
+        self.export_button.pack(side=tk.BOTTOM, pady=5)
+
+    def export_data(self):
+        self.parent.export_to_json()
 
     def spawn_checks(self):
         self.parent.deficit.set(0)
@@ -526,31 +594,28 @@ class PrinterFrame(tk.Frame):
                 alerts_list.config(yscrollcommand=scrollbar.set)
                 scrollbar.config(command=alerts_list.yview)
 
-            #Start finding the correct picture to match the model    
-            model=printer_model.cget('text').decode('utf-8')
-            printer_image=None
-            if model == 'MP C6004ex':
-                printer_image=parent.parent.c6004ex
+            # Start finding the correct picture to match the model    
+            model = printer_model.cget('text').decode('utf-8')
+            printer_image = None
+            if model in ['MP C6004ex', 'IM C6000', 'IM C3000']:
+                printer_image = parent.parent.c6004ex
             elif model == 'MP C3504ex':
-                printer_image=parent.parent.c3504ex
+                printer_image = parent.parent.c3504ex
             elif model == 'IM C4500':
-                printer_image=parent.parent.c4500
+                printer_image = parent.parent.c4500
             elif model == 'MP C6503':
-                #The C6503 may or may not have an LCT
-                for item in walk(printer['IP'],
-                                 'public',
-                                 parent.parent.tray_names_base_OID
-                                 ):
-                    #Check if the tray names contain 'LCT'
+                # The C6503 may or may not have an LCT
+                for item in walk(printer['IP'], 'public', parent.parent.tray_names_base_OID):
+                    # Check if the tray names contain 'LCT'
                     if 'LCT' in item[1].decode('utf-8'):
-                        printer_image=parent.parent.c6503f
+                        printer_image = parent.parent.c6503f
                         break
                 if printer_image is None:
-                    #If the image still has not been set, it must be non-LCT C6503
-                    printer_image=parent.parent.c6503
+                    # If the image still has not been set, it must be non-LCT C6503
+                    printer_image = parent.parent.c6503
             else:
-                #If user added model does not have an image
-                printer_image=parent.parent.missing_model
+                # If user added model does not have an image
+                printer_image = parent.parent.missing_model
 
             #Now that we know where the image should point to, create image object
             printer_image_canvas=tk.Canvas(self, width=135, height=140)
@@ -582,6 +647,7 @@ class PrinterFrame(tk.Frame):
             tray_names=[]
             tray_current_level=[]
             tray_max_level=[]
+            MainTable = [[],[],[]]
             for item in walk(printer['IP'],
                              'public',
                              parent.parent.tray_names_base_OID
@@ -597,6 +663,12 @@ class PrinterFrame(tk.Frame):
                              parent.parent.tray_max_capacity_base_OID
                              ):
                 tray_max_level.append(item[1])
+            MainTable[0] = tray_names
+            MainTable[1] = tray_current_level
+            MainTable[2] = tray_max_level
+            MainnTable.append(MainTable)
+            
+
 
             tray_frame=tk.Frame(self)
             tray_frame.pack(pady=(10,5))
