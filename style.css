@@ -140,7 +140,7 @@ html {
   font-weight: bold;
 }
 
-@media (max-width: 71.11vh) {
+@media (max-width: 100vh) {
     .printer {
         display: flex;
         flex-direction: row;
