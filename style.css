@@ -1,0 +1,46 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+h1 {
+    color: #333;
+}
+
+.printer {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+}
+
+.printer h2 {
+    color: #444;
+}
+
+.details, .errors {
+    margin-top: 10px;
+}
+
+.detail, .error {
+    margin-bottom: 5px;
+}
+
+.ink-level {
+    margin-top: 10px;
+}
+
+.ink-level span {
+    display: inline-block;
+    margin-right: 10px;
+    padding: 2px 5px;
+    background-color: #eee;
+    border-radius: 4px;
+}
+
+.tray-info, .errors-list {
+    list-style-type: none;
+    padding-left: 0;
+}
