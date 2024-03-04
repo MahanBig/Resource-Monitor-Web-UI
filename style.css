@@ -1,139 +1,196 @@
-body, html {
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f7f7f7;
+body,
+html {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f7f7f7;
 }
 
 .dashboard-header {
-    background-color: #4CAF50;
-    color: white;
-    text-align: center;
-    padding: 1vh;
+  background-color: #4caf50;
+  color: white;
+  text-align: center;
+  padding: 1vh;
 }
 
 .printer-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    grid-auto-rows: minmax(150px, auto);
-    gap: 1vh;
-    padding: 2vh;
-    overflow: hidden;
-    height: 88vh; /* Adjusted to account for header height and padding */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-auto-rows: minmax(150px, auto);
+  gap: 1vh;
+  padding: 2vh;
+  overflow: hidden;
+  height: 88vh; /* Adjusted to account for header height and padding */
 }
 
 .printer {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin: 10px;
-    padding: 2vh;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    overflow-y: auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 10px;
+  padding: 2vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
 }
 
 .printer h2 {
-    font-size: 1.2em;
-    margin: 0;
-    color: #333;
-    margin-bottom: 1vh;
+  font-size: 1.2em;
+  margin: 0;
+  color: #333;
+  margin-bottom: 1vh;
 }
 
 .printer-icon {
-    width: 300px;
-    height: 300px;
-    background-image: url('printer-icon.png');
-    background-size: cover;
-    margin-bottom: 1vh;
+  width: 300px;
+  height: 300px;
+  background-image: url("printer-icon.png");
+  background-size: cover;
+  margin-bottom: 1vh;
 }
 
 .details {
-    width: 100%;
+  width: 100%;
 }
 
 .detail {
-    margin-bottom: 1vh;
-    font-size: 0.9em;
+  margin-bottom: 1vh;
+  font-size: 0.9em;
 }
 
 .detail strong {
-    color: #333;
+  color: #333;
 }
 
-.ink-level, .tray-info {
-    background-color: #e9e9e9;
-    border-radius: 4px;
-    padding: 1vh;
-    font-size: 0.8em;
+.ink-level,
+.tray-info {
+  background-color: #e9e9e9;
+  border-radius: 4px;
+  padding: 1vh;
+  font-size: 0.8em;
 }
 
 .errors-list {
-    list-style-type: none;
-    padding-left: 20px;
-    margin-top: 1vh;
-    font-size: 0.8em;
-    color: #b00;
+  list-style-type: none;
+  padding-left: 20px;
+  margin-top: 1vh;
+  font-size: 0.8em;
+  color: #b00;
 }
 /* ... existing styles ... */
 
 .ink-levels {
-    width: 100%;
-    text-align: left;
-    margin-top: 1vh;
+  width: 100%;
+  text-align: left;
+  margin-top: 1vh;
 }
 
 .ink-level-bar-container {
-    background-color: #eee;
-    border-radius: 5px;
-    overflow: hidden;
-    margin-bottom: 1vh;
+  background-color: #eee;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 1vh;
 }
 
 .ink-level-bar {
-    height: 10px;
-    border-radius: 5px;
+  height: 10px;
+  border-radius: 5px;
 }
 
 .ink-black {
-    background-color: #000000;
+  background-color: #000000;
 }
 
 .ink-cyan {
-    background-color: #00bfff;
+  background-color: #00bfff;
 }
 
 .ink-magenta {
-    background-color: #ff00ff;
+  background-color: #ff00ff;
 }
 
 .ink-yellow {
-    background-color: #ffff00;
+  background-color: #ffff00;
 }
 
 .tray-counters {
-    width: 100%;
-    margin-top: 1vh;
+  width: 100%;
+  margin-top: 1vh;
 }
 
 .tray-counter {
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 5px;
-    margin-bottom: 1vh;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 5px;
+  margin-bottom: 1vh;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .tray-counter strong {
-    margin-right: 10px;
+  margin-right: 10px;
 }
 
 .tray-number {
-    color: #333;
-    font-weight: bold;
+  color: #333;
+  font-weight: bold;
+}
+
+@media (max-width: 71.11vh) {
+    .printer {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        padding: 2px;
+        box-sizing: border-box;
+        overflow-x: hidden;
+    }
+
+    .printer-icon, .detail {
+        display: none; /* Hide the printer icon and IP/Serial details */
+    }
+
+    .printer h2 {
+        flex: 0 0 auto; /* Do not grow or shrink; just be big enough to fit content */
+        margin-right: 10px; /* Space after the printer name */
+        font-size: 12px; /* Smaller font size to ensure it fits without overflow */
+    }
+
+    .details {
+        display: flex;
+        flex-grow: 1; /* Fill the remaining space */
+        align-items: center;
+    }
+
+    .ink-levels {
+        display: flex;
+        flex-direction: column; /* Stack ink level bars on top of each other */
+        margin-right: 10px; /* Space after ink levels */
+    }
+
+    .ink-level-bar-container {
+        width: 100px; /* Adjust width of the ink level bars */
+        margin-bottom: 2px; /* Space between stacked bars */
+    }
+
+    .tray-info, .errors-list, .tray-counter {
+        display: flex;
+        flex-direction: column; /* Stack tray and error info on top of each other */
+        margin-right: 10px; /* Space after the tray and error info */
+        font-size: 12px; /* Smaller font size for compact display */
+        line-height: 1.2; /* Adjust line height for better readability */
+        padding: 0; /* Remove padding */
+        margin-bottom: 0px;
+        align-items: start;
+    }
+
+    .tray-info li, .errors-list li {
+        margin-bottom: 2px; /* Space between stacked list items */
+    }
 }
