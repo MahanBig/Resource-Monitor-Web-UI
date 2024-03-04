@@ -185,7 +185,7 @@ html {
         margin-right: 10px; /* Space after the tray and error info */
         font-size: 12px; /* Smaller font size for compact display */
         line-height: 1.2; /* Adjust line height for better readability */
-        padding: 0; /* Remove padding */
+        padding: 2px; /* Remove padding */
         margin-bottom: 0px;
         align-items: start;
     }
