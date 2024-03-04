@@ -1,46 +1,139 @@
-body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
+body, html {
+    margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f7f7f7;
 }
 
-h1 {
-    color: #333;
+.dashboard-header {
+    background-color: #4CAF50;
+    color: white;
+    text-align: center;
+    padding: 1vh;
+}
+
+.printer-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-auto-rows: minmax(150px, auto);
+    gap: 1vh;
+    padding: 2vh;
+    overflow: hidden;
+    height: 88vh; /* Adjusted to account for header height and padding */
 }
 
 .printer {
     background-color: #fff;
-    border: 1px solid #ddd;
-    margin-bottom: 20px;
-    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin: 10px;
+    padding: 2vh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
 }
 
 .printer h2 {
-    color: #444;
+    font-size: 1.2em;
+    margin: 0;
+    color: #333;
+    margin-bottom: 1vh;
 }
 
-.details, .errors {
-    margin-top: 10px;
+.printer-icon {
+    width: 300px;
+    height: 300px;
+    background-image: url('printer-icon.png');
+    background-size: cover;
+    margin-bottom: 1vh;
 }
 
-.detail, .error {
-    margin-bottom: 5px;
+.details {
+    width: 100%;
 }
 
-.ink-level {
-    margin-top: 10px;
+.detail {
+    margin-bottom: 1vh;
+    font-size: 0.9em;
 }
 
-.ink-level span {
-    display: inline-block;
-    margin-right: 10px;
-    padding: 2px 5px;
-    background-color: #eee;
+.detail strong {
+    color: #333;
+}
+
+.ink-level, .tray-info {
+    background-color: #e9e9e9;
     border-radius: 4px;
+    padding: 1vh;
+    font-size: 0.8em;
 }
 
-.tray-info, .errors-list {
+.errors-list {
     list-style-type: none;
-    padding-left: 0;
+    padding-left: 20px;
+    margin-top: 1vh;
+    font-size: 0.8em;
+    color: #b00;
+}
+/* ... existing styles ... */
+
+.ink-levels {
+    width: 100%;
+    text-align: left;
+    margin-top: 1vh;
+}
+
+.ink-level-bar-container {
+    background-color: #eee;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 1vh;
+}
+
+.ink-level-bar {
+    height: 10px;
+    border-radius: 5px;
+}
+
+.ink-black {
+    background-color: #000000;
+}
+
+.ink-cyan {
+    background-color: #00bfff;
+}
+
+.ink-magenta {
+    background-color: #ff00ff;
+}
+
+.ink-yellow {
+    background-color: #ffff00;
+}
+
+.tray-counters {
+    width: 100%;
+    margin-top: 1vh;
+}
+
+.tray-counter {
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 5px;
+    margin-bottom: 1vh;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tray-counter strong {
+    margin-right: 10px;
+}
+
+.tray-number {
+    color: #333;
+    font-weight: bold;
 }

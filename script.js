@@ -8,15 +8,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 const printerDiv = document.createElement('div');
                 printerDiv.className = 'printer';
 
+                // Create ink level bars
+                const createInkLevelBar = (color, width) => {
+                    return `
+                        <div class="ink-level-bar-container">
+                            <div class="ink-level-bar ink-${color}" style="width: ${width};"></div>
+                        </div>
+                    `;
+                };
+
+                // Skipping the second ink level as it is unknown
+                const inkLevelsHtml = `
+                    ${createInkLevelBar('black', printer['Ink Levels'][0])}
+                    ${createInkLevelBar('cyan', printer['Ink Levels'][2])}
+                    ${createInkLevelBar('magenta', printer['Ink Levels'][3])}
+                    ${createInkLevelBar('yellow', printer['Ink Levels'][4])}
+                `;
+
+                // Create tray counters
+                const trayCountersHtml = printer['Tray Information']
+                    .slice(0, -1) // Ignore the last tray information
+                    .map((count, index) => `
+                        <div class="tray-counter">
+                            <strong>Tray ${index + 1}:</strong>
+                            <span class="tray-number">${count} sheets</span>
+                        </div>
+                    `).join('');
+
                 printerDiv.innerHTML = `
+                    <div class="printer-icon"></div>
                     <h2>${printer.Name} (${printer.Model})</h2>
                     <div class="details">
                         <div class="detail"><strong>IP:</strong> ${printer.IP}</div>
                         <div class="detail"><strong>Serial:</strong> ${printer.Serial || 'N/A'}</div>
-                        <div class="ink-level"><strong>Ink Levels:</strong> ${printer['Ink Levels'].join(', ')}</div>
-                        <ul class="tray-info"><strong>Tray Information:</strong> ${printer['Tray Information'].map(info => `<li>${info}</li>`).join('')}</ul>
-                        <div class="errors"><strong>Errors:</strong></div>
-                        <ul class="errors-list">${printer.Errors.map(error => `<li class="error">${error}</li>`).join('')}</ul>
+                        <div class="ink-levels">
+                            <strong>Ink Levels:</strong>
+                            ${inkLevelsHtml} <!-- Now correctly defined in the scope -->
+                        </div>
+                        <div class="tray-counters">
+                            <strong>Tray Paper Count:</strong>
+                            ${trayCountersHtml}
+                        </div>
+                        <ul class="errors-list"><strong>Errors:</strong> ${printer.Errors.map(error => `<li class="error">${error}</li>`).join('')}</ul>
                     </div>
                 `;
 
