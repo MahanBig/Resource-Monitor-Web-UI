@@ -82,5 +82,5 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Call fetchPrinterData every 10 seconds
   fetchPrinterData(); // Fetch immediately on load
-  setInterval(fetchPrinterData, 10000); // Then fetch every 10 seconds
+  setInterval(fetchPrinterData, 1000); // Then fetch every 10 seconds
 });
