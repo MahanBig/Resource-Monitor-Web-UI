@@ -11,7 +11,6 @@ import sys
 import json
 
 class MainApplication(tk.Frame):
-    # Existing __init__ method here...
 
     def export_to_json(self):
         printer_data = []
