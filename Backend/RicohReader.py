@@ -6,6 +6,10 @@ import os
 import subprocess
 import tempfile
 from puresnmp import walk, get
+import tkinter as tk
+from tkinter import scrolledtext
+from tkinter import messagebox
+import paramiko
 
 # Initialize a threading event and a reference to the continuous execution thread
 stop_event = threading.Event()
@@ -60,6 +64,10 @@ def fetch_and_export_printers(printers, model_OID, ink_levels_base_OID, tray_cur
         print(f"Data exported to {file_path} successfully.")
     except:
         print("Something went wrong with saving")
+    try:
+        uploadToSFTP(file_path)
+    except:
+        print("Went wrong with upload")
 
 def load_printers(file_path):
     try:
@@ -92,36 +100,87 @@ def start_continuous_thread(file_path, interval):
     continuous_thread.daemon = True
     continuous_thread.start()
 
+
+
 def open_and_edit_pkl(file_path):
     try:
         with open(file_path, 'rb') as f:
             data = pickle.load(f)
-        temp_file = tempfile.NamedTemporaryFile(mode='w+t', delete=False, suffix='.json')
-        json.dump(data, temp_file, indent=4)
-        temp_file.close()
-        
-        if os.name == 'posix':
-            subprocess.call(['open', temp_file.name])
-        elif os.name == 'nt':
-            subprocess.call(['open', temp_file.name])
-        else:
-            print("Platform not supported for opening a text editor")
-            return
-        
-        input("Press Enter here after you have saved the file in the editor...")
-        
-        with open(temp_file.name, 'r') as f:
-            edited_data = json.load(f)
-        os.unlink(temp_file.name)
-        
-        with open(file_path, 'wb') as f:
-            pickle.dump(edited_data, f)
-        print("Successfully updated the .pkl file.")
+        # Convert data to a JSON string for editing
+        json_data = json.dumps(data, indent=4)
+
+        def save_changes():
+            try:
+                edited_data = json.loads(text_area.get(1.0, tk.END))
+                with open(file_path, 'wb') as f:
+                    pickle.dump(edited_data, f)
+                messagebox.showinfo("Success", "Successfully updated the .pkl file.")
+                editor_window.destroy()
+                start_continuous_thread(printers_file, run_interval)  # Restart thread to use updated data
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save the .pkl file: {e}")
+
+        # Create a Tkinter window
+        editor_window = tk.Tk()
+        editor_window.title("Edit .pkl File")
+
+        # Add a scrolled text widget
+        text_area = scrolledtext.ScrolledText(editor_window, wrap=tk.WORD, width=80, height=20)
+        text_area.pack(padx=10, pady=10)
+        text_area.insert(tk.INSERT, json_data)
+
+        # Add a Submit button
+        submit_button = tk.Button(editor_window, text="Submit", command=save_changes)
+        submit_button.pack(pady=5)
+
+        editor_window.mainloop()
+
     except Exception as e:
-        print(f"Failed to open and edit the .pkl file: {e}")
+        messagebox.showerror("Error", f"Failed to open and edit the .pkl file: {e}")
+
+
+def uploadToSFTP(filetoupload):
+    # SFTP server details
+    f = open('credentials.json')
+    credentials = json.load(f)
+
+    sftp_server = credentials['host']
+    sftp_port = credentials['port']  # Default SFTP port
+    sftp_username = credentials['user']
+    sftp_password = credentials['pass']
+    sftp_target_path = credentials['path']  # Target directory on SFTP server
+
+    # Initialize SSH client
+    ssh = paramiko.SSHClient()
+    # Automatically add host key
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # Connect to the server
+    try:
+        ssh.connect(sftp_server, port=sftp_port, username=sftp_username, password=sftp_password)
+        sftp = ssh.open_sftp()
+        
+        # Change to the target directory on the SFTP server
+        sftp.chdir(sftp_target_path)
+        
+        # Get the filename to use on the SFTP server
+        filename = os.path.basename(filetoupload)
+        # Upload the file
+        sftp.put(filetoupload, filename)
+        
+        print(f"Uploaded {filetoupload} to SFTP server at {sftp_target_path}")
+        
+        # Close the SFTP session and SSH connection
+        sftp.close()
+        ssh.close()
+    except Exception as e:
+        print(f"Failed to upload file to SFTP server: {e}")
+        # Close the SFTP session and SSH connection in case of failure
+        sftp.close()
+        ssh.close()
+
 
 # Global variables for the control panel to modify
-run_interval = 30
+run_interval = 40
 printers_file = 'Printers.pkl'
 
 def control_panel():
@@ -147,5 +206,6 @@ def control_panel():
             print("Invalid choice, please select 1, 2, or 3.")
 
 if __name__ == "__main__":
+# Accessing the password (assuming the JSON structure includes a "password" field)
     start_continuous_thread(printers_file, run_interval)
     control_panel()
