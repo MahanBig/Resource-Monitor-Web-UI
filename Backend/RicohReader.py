@@ -6,9 +6,6 @@ import os
 import subprocess
 import tempfile
 from puresnmp import walk, get
-import tkinter as tk
-from tkinter import scrolledtext
-from tkinter import messagebox
 
 # Initialize a threading event and a reference to the continuous execution thread
 stop_event = threading.Event()
@@ -95,42 +92,33 @@ def start_continuous_thread(file_path, interval):
     continuous_thread.daemon = True
     continuous_thread.start()
 
-
 def open_and_edit_pkl(file_path):
     try:
         with open(file_path, 'rb') as f:
             data = pickle.load(f)
-        # Convert data to a JSON string for editing
-        json_data = json.dumps(data, indent=4)
-
-        def save_changes():
-            try:
-                edited_data = json.loads(text_area.get(1.0, tk.END))
-                with open(file_path, 'wb') as f:
-                    pickle.dump(edited_data, f)
-                messagebox.showinfo("Success", "Successfully updated the .pkl file.")
-                editor_window.destroy()
-                start_continuous_thread(printers_file, run_interval)  # Restart thread to use updated data
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save the .pkl file: {e}")
-
-        # Create a Tkinter window
-        editor_window = tk.Tk()
-        editor_window.title("Edit .pkl File")
-
-        # Add a scrolled text widget
-        text_area = scrolledtext.ScrolledText(editor_window, wrap=tk.WORD, width=80, height=20)
-        text_area.pack(padx=10, pady=10)
-        text_area.insert(tk.INSERT, json_data)
-
-        # Add a Submit button
-        submit_button = tk.Button(editor_window, text="Submit", command=save_changes)
-        submit_button.pack(pady=5)
-
-        editor_window.mainloop()
-
+        temp_file = tempfile.NamedTemporaryFile(mode='w+t', delete=False, suffix='.json')
+        json.dump(data, temp_file, indent=4)
+        temp_file.close()
+        
+        if os.name == 'posix':
+            subprocess.call(['open', temp_file.name])
+        elif os.name == 'nt':
+            subprocess.call(['open', temp_file.name])
+        else:
+            print("Platform not supported for opening a text editor")
+            return
+        
+        input("Press Enter here after you have saved the file in the editor...")
+        
+        with open(temp_file.name, 'r') as f:
+            edited_data = json.load(f)
+        os.unlink(temp_file.name)
+        
+        with open(file_path, 'wb') as f:
+            pickle.dump(edited_data, f)
+        print("Successfully updated the .pkl file.")
     except Exception as e:
-        messagebox.showerror("Error", f"Failed to open and edit the .pkl file: {e}")
+        print(f"Failed to open and edit the .pkl file: {e}")
 
 # Global variables for the control panel to modify
 run_interval = 30
@@ -159,6 +147,5 @@ def control_panel():
             print("Invalid choice, please select 1, 2, or 3.")
 
 if __name__ == "__main__":
-    # Initialize the Tkinter window in the main thread
-    control_panel_thread = threading.Thread(target=control_panel)
-    control_panel_thread.start()
+    start_continuous_thread(printers_file, run_interval)
+    control_panel()
