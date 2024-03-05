@@ -15,12 +15,11 @@ html {
 
 .printer-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  grid-auto-rows: minmax(150px, auto);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Use 'auto-fit' and adjust the min width if necessary */
+  grid-auto-rows: 1fr; /* This will scale the row height to fit the container */
   gap: 1vh;
   padding: 2vh;
   overflow: hidden;
-  height: 88vh; /* Adjusted to account for header height and padding */
 }
 
 .printer {
@@ -34,6 +33,7 @@ html {
   flex-direction: column;
   align-items: center;
   overflow-y: auto;
+  height: 100%; /* This ensures that the printer containers take full height */
 }
 
 .printer h2 {
@@ -79,7 +79,6 @@ html {
   font-size: 0.8em;
   color: rgb(116, 8, 8);
 }
-/* ... existing styles ... */
 
 .ink-levels {
   width: 100%;
@@ -140,34 +139,25 @@ html {
   font-weight: bold;
 }
 
-@media (max-width: 100vh) {
-    .printer {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: flex-start;
-        width: 100%;
-        padding: 2px;
-        box-sizing: border-box;
-        overflow-x: hidden;
-    }
+@media (max-width: 768px) {
+  .printer-container {
+    grid-template-columns: 1fr; /* Single column layout for smaller screens */
+    grid-auto-rows: minmax(100px, auto); /* Sets a minimum height for the rows and allows them to grow as needed */
+  }
+  .printer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    padding: 2px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
 
     .dashboard-header {
-      background-color: #4caf50;
-      color: white;
-      text-align: center;
-      padding: 0vh;
+      display: none;
 
-    }
-
-    .printer-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      grid-auto-rows: minmax(1px, auto);
-      gap: 0vh;
-      padding: 1vh;
-      overflow: hidden;
-      height: 88vh; /* Adjusted to account for header height and padding */
     }
 
     .printer-icon, .detail {
@@ -225,7 +215,7 @@ html {
 
 @keyframes pulsate2 {
   0% { background-color: #fff; }
-  50% { background-color: #e2bc13; } /* Light red color */
+  50% { background-color: #daf108; } /* Light red color */
   100% { background-color: #fff; }
 }
 

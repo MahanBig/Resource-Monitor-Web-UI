@@ -10,8 +10,6 @@ from puresnmp import walk, get
 import sys
 import json
 
-MainnTable = []
-
 class MainApplication(tk.Frame):
     # Existing __init__ method here...
 
@@ -666,7 +664,6 @@ class PrinterFrame(tk.Frame):
             MainTable[0] = tray_names
             MainTable[1] = tray_current_level
             MainTable[2] = tray_max_level
-            MainnTable.append(MainTable)
             
 
 
