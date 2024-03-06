@@ -10,12 +10,16 @@ import tkinter as tk
 from tkinter import scrolledtext
 from tkinter import messagebox
 import paramiko
+from datetime import datetime
 
 # Initialize a threading event and a reference to the continuous execution thread
 stop_event = threading.Event()
 continuous_thread = None
+print(os.getcwd())
 
 def fetch_and_export_printers(printers, model_OID, ink_levels_base_OID, tray_current_capacity_base_OID, error_base_OID):
+    now = datetime.now()
+    currenttime = now.strftime('%d %m %Y, %H:%M')
     printer_data = []
     for printer in printers:
         printer_info = {
@@ -23,7 +27,8 @@ def fetch_and_export_printers(printers, model_OID, ink_levels_base_OID, tray_cur
             "Name": printer["Name"],
             "Serial": printer["Serial"],
             "EID": printer["EID"],
-            "Default": printer["Default"]
+            "Default": printer["Default"],
+            "Time": currenttime
         }
 
         # SNMP fetch model

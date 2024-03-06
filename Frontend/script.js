@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", function () {
                       <strong>Tray Paper Count:</strong>
                       ${trayCountersHtml}
                   </div>
+                  <div class="detail"><strong>Time:</strong> ${printer.Time}</div>
                   <ul class="errors-list"><strong>Status:</strong> ${printer.Errors.map(
                     (error) => `<li class="error">${error}</li>`
                   ).join("")}</ul>

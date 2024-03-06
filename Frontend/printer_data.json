@@ -5,6 +5,7 @@
         "Serial": "",
         "EID": "",
         "Default": true,
+        "Time": "06 03 2024, 09:25",
         "Model": "IM C3000",
         "Ink Levels": [
             "90%",
@@ -21,7 +22,8 @@
             "0"
         ],
         "Errors": [
-            "Tomt for papir: magasin 3 {13400}"
+            "Tomt for papir: magasin 3 {13400}",
+            "Energisparemodus {10033}"
         ]
     },
     {
@@ -30,6 +32,7 @@
         "Serial": "",
         "EID": "",
         "Default": true,
+        "Time": "06 03 2024, 09:25",
         "Model": "IM C6000",
         "Ink Levels": [
             "20%",
@@ -56,6 +59,7 @@
         "Serial": "",
         "EID": "",
         "Default": true,
+        "Time": "06 03 2024, 09:25",
         "Model": "IM C3000",
         "Ink Levels": [
             "40%",
@@ -65,14 +69,14 @@
             "80%"
         ],
         "Tray Information": [
-            "0",
+            "165",
             "385",
             "55",
             "385",
             "0"
         ],
         "Errors": [
-            "Tomt for papir: magasin 1 {13200}"
+            "Energisparemodus {10033}"
         ]
     },
     {
@@ -81,6 +85,7 @@
         "Serial": "",
         "EID": "",
         "Default": true,
+        "Time": "06 03 2024, 09:25",
         "Model": "IM C3000",
         "Ink Levels": [
             "100%",
@@ -106,16 +111,17 @@
         "Serial": "",
         "EID": "",
         "Default": true,
+        "Time": "06 03 2024, 09:25",
         "Model": "IM C6000",
         "Ink Levels": [
             "50%",
             "100%",
             "30%",
-            "30%",
+            "20%",
             "20%"
         ],
         "Tray Information": [
-            "550",
+            "165",
             "0",
             "0",
             "165",
@@ -132,6 +138,7 @@
         "Serial": "",
         "EID": "",
         "Default": true,
+        "Time": "06 03 2024, 09:25",
         "Model": "IM C3000",
         "Ink Levels": [
             "70%",
