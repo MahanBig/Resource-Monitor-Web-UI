@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .map(
               (count, index) => `
                   <div class="tray-counter">
-                      <strong>Tray ${index + 1}: ${count} Ark</strong>
+                      <strong class="detail">Tray ${index + 1}:</strong><strong> ${count} Ark</strong>
                   </div>
               `
             )
