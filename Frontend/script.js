@@ -18,21 +18,25 @@ document.addEventListener("DOMContentLoaded", function () {
               </div>
             `;
           };
-          // const hasWarning = printer.Errors.some(
-          //   (error) =>
-          //     error.includes("{13300}") ||
-          //     error.includes("{13400}")
-          // );
-          // const hasCriticalError = printer.Errors.some(
-          //   (error) =>
-          //     error.includes("{10033}")
-          // );
-          // if (hasCriticalError) {
-          //   printerDiv.classList.add("pulsate-error");
-          // }
-          // if (hasWarning) {
-          //   printerDiv.classList.add("pulsate-warning");
-          // }
+          const hasWarning = printer.Errors.some(
+            (error) =>
+              error.includes("blmablo")
+          );
+          const hasCriticalError = printer.Errors.some(
+            (error) =>
+            error.includes("Error fetching errors") ||
+            error.includes("Papirstopp") ||
+            error.includes("stifter") ||
+            error.includes("Reduser") ||
+            error.includes("Fyll på") ||
+            error.includes("Funksjonsproblem")
+          );
+          if (hasCriticalError) {
+            printerDiv.classList.add("pulsate-error");
+          }
+          if (hasWarning) {
+            printerDiv.classList.add("pulsate-warning");
+          }
 
           // Skipping the second ink level as it is unknown
           const inkLevelsHtml = `
@@ -83,5 +87,5 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Call fetchPrinterData every 10 seconds
   fetchPrinterData(); // Fetch immediately on load
-  setInterval(fetchPrinterData, 1000); // Then fetch every 10 seconds
+  setInterval(fetchPrinterData, 5000); // Then fetch every 10 seconds
 });
