@@ -54,7 +54,7 @@ def fetch_and_export_printers(printers, model_OID, ink_levels_base_OID, tray_cur
 
         # SNMP fetch errors
         try:
-            errors = [item[1].decode('utf-8') for item in walk(printer['IP'], 'public', error_base_OID)]
+            errors = [item[1].decode('utf-8', errors='ignore') for item in walk(printer['IP'], 'public', error_base_OID)]
             printer_info["Errors"] = errors
         except Exception as e:
             printer_info["Errors"] = ["Error fetching errors"]
