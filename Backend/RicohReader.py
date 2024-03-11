@@ -33,7 +33,7 @@ def fetch_and_export_printers(printers, model_OID, ink_levels_base_OID, tray_cur
 
         # SNMP fetch model
         try:
-            model = get(printer['IP'], 'public', model_OID).decode('utf-8')
+            model = get(printer['IP'], 'public', model_OID).decode('utf-8', errors='ignore')
             printer_info["Model"] = model
         except Exception as e:
             printer_info["Model"] = "Error fetching model"
