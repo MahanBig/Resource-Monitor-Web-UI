@@ -87,6 +87,7 @@ html {
 }
 
 .ink-level-bar-container {
+  box-shadow: 10px #888888;
   background-color: #eee;
   border-radius: 5px;
   overflow: hidden;
@@ -98,6 +99,7 @@ html {
 }
 
 .ink-level-bar {
+  box-shadow: 10px 10px 8px #888888;
   height: 10px;
   border-radius: 5px;
 }
@@ -226,4 +228,13 @@ html {
 .pulsate-warning {
   /* animation: pulsate2 2s infinite; */
   background-color: #fdfd96;
+}
+
+.almostempty {
+  /* animation: pulsate2 2s infinite; */
+  background-color: #fdfd96;
+}
+.empty {
+  /* animation: pulsate2 2s infinite; */
+  background-color: #f79f9f;
 }

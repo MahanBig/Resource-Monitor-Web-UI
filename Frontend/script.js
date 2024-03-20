@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
       .then((response) => response.json())
       .then((printerData) => {
         const container = document.getElementById("printerInfo");
-        container.innerHTML = ''; // Clear existing content before adding new fetched data
+        container.innerHTML = ""; // Clear existing content before adding new fetched data
 
         printerData.forEach((printer) => {
           const printerDiv = document.createElement("div");
@@ -24,19 +24,19 @@ document.addEventListener("DOMContentLoaded", function () {
           };
           const hasWarning = printer.Errors.some(
             (error) =>
-              error.includes("Tom:")||
-              error.includes("Nesten")||
-              error.includes("Forbred")||
+              error.includes("Nesten") ||
+              error.includes("Forbred") ||
               error.includes("Finner ikke:")
           );
           const hasCriticalError = printer.Errors.some(
             (error) =>
-            error.includes("Error fetching errors") ||
-            error.includes("Papirstopp") ||
-            error.includes("stifter") ||
-            error.includes("Reduser") ||
-            error.includes("Fyll på") ||
-            error.includes("Funksjonsproblem")
+              error.includes("Error fetching errors") ||
+              error.includes("Papirstopp") ||
+              error.includes("Tom:") ||
+              error.includes("stifter") ||
+              error.includes("Reduser") ||
+              error.includes("Fyll på") ||
+              error.includes("Funksjonsproblem")
           );
           if (hasCriticalError) {
             printerDiv.classList.add("pulsate-error");
@@ -56,13 +56,24 @@ document.addEventListener("DOMContentLoaded", function () {
           // Create tray counters
           const trayCountersHtml = printer["Tray Information"]
             .slice(0, -1) // Ignore the last tray information
-            .map(
-              (count, index) => `
-                  <div class="tray-counter">
-                      <strong class="detail">Tray ${index + 1}:</strong><strong> ${count} Ark</strong>
-                  </div>
-              `
-            )
+            .map((count, index) => {
+              // Determine class based on count value
+              let countClass = "";
+              if (count == 0) {
+                countClass = "empty";
+              } else if (count < 56) {
+                countClass = "almostempty";
+              }
+
+              // Generate HTML string with the appropriate class
+              return `
+              <div class="tray-counter ${countClass}">
+                  <strong class="detail">Tray ${
+                    index + 1
+                  }:</strong><strong> ${count} Ark</strong>
+              </div>
+            `;
+            })
             .join("");
 
           printerDiv.innerHTML = `
@@ -70,7 +81,9 @@ document.addEventListener("DOMContentLoaded", function () {
               <h2>${printer.Name} (${printer.Model})</h2>
               <div class="details">
                   <div class="detail"><strong>IP:</strong> ${printer.IP}</div>
-                  <div class="detail"><strong>Serial:</strong> ${printer.Serial || "N/A"}</div>
+                  <div class="detail"><strong>Serial:</strong> ${
+                    printer.Serial || "N/A"
+                  }</div>
                   <div class="ink-levels">
                       <strong>Ink Levels:</strong>
                       ${inkLevelsHtml}
@@ -79,7 +92,9 @@ document.addEventListener("DOMContentLoaded", function () {
                       <strong>Tray Paper Count:</strong>
                       ${trayCountersHtml}
                   </div>
-                  <div class="detail"><strong>Time:</strong> ${printer.Time}</div>
+                  <div class="detail"><strong>Time:</strong> ${
+                    printer.Time
+                  }</div>
                   <ul class="errors-list"><strong>Status:</strong> ${printer.Errors.map(
                     (error) => `<li class="error">${error}</li>`
                   ).join("")}</ul>
@@ -87,16 +102,21 @@ document.addEventListener("DOMContentLoaded", function () {
           `;
 
           container.appendChild(printerDiv);
-          const EmptyPaper = printerDiv.textContent.includes('{13200}') && printerDiv.textContent.includes('{13300}') && printerDiv.textContent.includes('{13400}')
+          const EmptyPaper =
+            printerDiv.textContent.includes("{13200}") &&
+            printerDiv.textContent.includes("{13300}") &&
+            printerDiv.textContent.includes("{13400}");
           if (EmptyPaper) {
             printerDiv.classList.add("pulsate-warning");
           }
         });
       })
-      .catch((error) => console.error("Error loading the printer data:", error));
+      .catch((error) =>
+        console.error("Error loading the printer data:", error)
+      );
   };
 
   // Call fetchPrinterData every 10 seconds
   fetchPrinterData(); // Fetch immediately on load
-  setInterval(fetchPrinterData, 5000); // Then fetch every 10 seconds
+  setInterval(fetchPrinterData, 8500); // Then fetch every 10 seconds
 });
