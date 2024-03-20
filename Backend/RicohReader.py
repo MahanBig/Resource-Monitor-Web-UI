@@ -3,8 +3,6 @@ import time
 import pickle
 import json
 import os
-import subprocess
-import tempfile
 from puresnmp import walk, get
 import tkinter as tk
 from tkinter import scrolledtext
