@@ -93,6 +93,10 @@ html {
   margin-bottom: 1vh;
 }
 
+.hidetext {
+  display: none;
+}
+
 .ink-level-bar {
   height: 10px;
   border-radius: 5px;
@@ -220,5 +224,6 @@ html {
 }
 
 .pulsate-warning {
-  animation: pulsate2 2s infinite;
+  /* animation: pulsate2 2s infinite; */
+  background-color: #fdfd96;
 }

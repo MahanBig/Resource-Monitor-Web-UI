@@ -14,13 +14,20 @@ document.addEventListener("DOMContentLoaded", function () {
           const createInkLevelBar = (color, width) => {
             return `
               <div class="ink-level-bar-container">
-                  <div class="ink-level-bar ink-${color}" style="width: ${width};"></div>
+                  <div class="ink-level-bar ink-${color}" style="width: ${width};">
+                  <div class="hidetext">
+                  ${color} ${width}
+                  </div>
+                  </div>
               </div>
             `;
           };
           const hasWarning = printer.Errors.some(
             (error) =>
-              error.includes("blmablo")
+              error.includes("Tom:")||
+              error.includes("Nesten")||
+              error.includes("Forbred")||
+              error.includes("Finner ikke:")
           );
           const hasCriticalError = printer.Errors.some(
             (error) =>
@@ -80,6 +87,10 @@ document.addEventListener("DOMContentLoaded", function () {
           `;
 
           container.appendChild(printerDiv);
+          const EmptyPaper = printerDiv.textContent.includes('{13200}') && printerDiv.textContent.includes('{13300}') && printerDiv.textContent.includes('{13400}')
+          if (EmptyPaper) {
+            printerDiv.classList.add("pulsate-warning");
+          }
         });
       })
       .catch((error) => console.error("Error loading the printer data:", error));
