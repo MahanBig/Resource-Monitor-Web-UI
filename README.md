@@ -17,7 +17,7 @@ Have you ever wanted to monitor your Ricoh branded printers on a neat little web
 - A FTP or SFTP solution
 - A website hosting solution
 - A server than can run Python
-
+- All machines need to configured to norwegian for this to work
 
 
 ## What you will need to provide yourself
