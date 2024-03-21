@@ -30,8 +30,6 @@ This will be used for the SFTP or FTP login server solution and to upload your j
   {
     "host": "sftp.example.com",
     "port": "22",
-    "protocol": "1",
-    "type": "0",
     "user": "USERNAME",
     "pass": "PASSWORD",
     "path": "/Path/in/server"
