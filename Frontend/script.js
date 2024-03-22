@@ -1,8 +1,42 @@
 document.addEventListener("DOMContentLoaded", function () {
+  // Helper function to create a simple hash code from a string
+  String.prototype.hashCode = function () {
+    let hash = 0,
+      i,
+      chr;
+    if (this.length === 0) return hash;
+    for (i = 0; i < this.length; i++) {
+      chr = this.charCodeAt(i);
+      hash = (hash << 5) - hash + chr;
+      hash |= 0; // Convert to 32bit integer
+    }
+    return hash;
+  };
+
+  let intervalId = null; // Holds the interval ID for clearing if needed
+
   const fetchPrinterData = () => {
     fetch("printer_data.json")
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
       .then((printerData) => {
+        // Use a simple hash of the printerData as a stand-in for last modified time
+        const dataHash = JSON.stringify(printerData).hashCode();
+
+        // Check if we've seen this dataHash before
+        const previousHash = localStorage.getItem("printerDataHash");
+        if (previousHash === dataHash) {
+          // Data hasn't changed, no need to update the UI
+          return;
+        }
+
+        // Update the stored hash
+        localStorage.setItem("printerDataHash", dataHash);
+
         const container = document.getElementById("printerInfo");
         container.innerHTML = ""; // Clear existing content before adding new fetched data
 
@@ -22,6 +56,7 @@ document.addEventListener("DOMContentLoaded", function () {
               </div>
             `;
           };
+
           const hasWarning = printer.Errors.some(
             (error) =>
               error.includes("Nesten") ||
@@ -89,17 +124,15 @@ document.addEventListener("DOMContentLoaded", function () {
                       ${inkLevelsHtml}
                   </div>
                   <div class="tray-counters">
-                      <strong>Tray Paper Count:</strong>
-                      ${trayCountersHtml}
-                  </div>
-                  <div class="detail"><strong>Time:</strong> ${
-                    printer.Time
-                  }</div>
-                  <ul class="errors-list"><strong>Status:</strong> ${printer.Errors.map(
-                    (error) => `<li class="error">${error}</li>`
-                  ).join("")}</ul>
+                  <strong>Tray Paper Count:</strong>
+                  ${trayCountersHtml}
               </div>
-          `;
+              <div class="detail"><strong>Time:</strong> ${printer.Time}</div>
+              <ul class="errors-list"><strong>Status:</strong> ${printer.Errors.map(
+                (error) => `<li class="error">${error}</li>`
+              ).join("")}</ul>
+          </div>
+      `;
 
           container.appendChild(printerDiv);
           const EmptyPaper =
@@ -111,12 +144,19 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         });
       })
-      .catch((error) =>
-        console.error("Error loading the printer data:", error)
-      );
+      .catch((error) => {
+        console.error("Error loading the printer data:", error);
+      });
   };
 
-  // Call fetchPrinterData every 10 seconds
-  fetchPrinterData(); // Fetch immediately on load
-  setInterval(fetchPrinterData, 8500); // Then fetch every 10 seconds
+  // Clear any existing intervals to avoid multiple fetches
+  if (intervalId !== null) {
+    clearInterval(intervalId);
+  }
+
+  // Call fetchPrinterData once to load data initially
+  fetchPrinterData();
+
+  // Set up the interval to fetch data every 8 seconds
+  intervalId = setInterval(fetchPrinterData, 8000);
 });
