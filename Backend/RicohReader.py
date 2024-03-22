@@ -1,6 +1,5 @@
 import threading
 import time
-import pickle
 import json
 import os
 from puresnmp import walk, get
@@ -75,7 +74,7 @@ def fetch_and_export_printers(printers, model_OID, ink_levels_base_OID, tray_cur
 def load_printers(file_path):
     try:
         with open(file_path, 'rb') as f:
-            printers = pickle.load(f)
+            printers = json.load(f)
     except Exception as e:
         printers = []  # Fallback to an empty list if loading fails
         print(f"Error loading printers from {file_path}: {e}")
@@ -105,27 +104,30 @@ def start_continuous_thread(file_path, interval):
 
 
 
-def open_and_edit_pkl(file_path):
+def open_and_edit_json(file_path):
     try:
-        with open(file_path, 'rb') as f:
-            data = pickle.load(f)
-        # Convert data to a JSON string for editing
+        
+        with open(file_path, 'r') as f:  # Open the file in read mode
+            data = json.load(f)  # Load the data using json
+
+        # Convert data to a JSON string for editing, if needed
         json_data = json.dumps(data, indent=4)
 
         def save_changes():
             try:
                 edited_data = json.loads(text_area.get(1.0, tk.END))
-                with open(file_path, 'wb') as f:
-                    pickle.dump(edited_data, f)
-                messagebox.showinfo("Success", "Successfully updated the .pkl file.")
+                with open(file_path, 'w') as f:  # Open the file in write mode
+                    json.dump(edited_data, f, indent=4)  # Dump the edited data back into the file
+                messagebox.showinfo("Success", "Successfully updated the JSON file.")
                 editor_window.destroy()
-                start_continuous_thread(printers_file, run_interval)  # Restart thread to use updated data
+                # You might need to adjust the following line according to your application's needs
+                # start_continuous_thread(printers_file, run_interval)  # Restart thread to use updated data
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to save the .pkl file: {e}")
+                messagebox.showerror("Error", f"Failed to save the JSON file: {e}")
 
         # Create a Tkinter window
         editor_window = tk.Tk()
-        editor_window.title("Edit .pkl File")
+        editor_window.title("Edit JSON File")
 
         # Add a scrolled text widget
         text_area = scrolledtext.ScrolledText(editor_window, wrap=tk.WORD, width=80, height=20)
@@ -139,7 +141,41 @@ def open_and_edit_pkl(file_path):
         editor_window.mainloop()
 
     except Exception as e:
-        messagebox.showerror("Error", f"Failed to open and edit the .pkl file: {e}")
+        messagebox.showerror("Error", f"Failed to open and edit the JSON file: {e}")
+    try:
+        with open(file_path, 'rb') as f:
+            data = json.load(f)
+        # Convert data to a JSON string for editing
+        json_data = json.dumps(data, indent=4)
+
+        def save_changes():
+            try:
+                edited_data = json.loads(text_area.get(1.0, tk.END))
+                with open(file_path, 'wb') as f:
+                    json.dump(edited_data, f)
+                messagebox.showinfo("Success", "Successfully updated the Printers.json file.")
+                editor_window.destroy()
+                start_continuous_thread(printers_file, run_interval)  # Restart thread to use updated data
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save the Printers.json file: {e}")
+
+        # Create a Tkinter window
+        editor_window = tk.Tk()
+        editor_window.title("Edit Printers.json File")
+
+        # Add a scrolled text widget
+        text_area = scrolledtext.ScrolledText(editor_window, wrap=tk.WORD, width=80, height=20)
+        text_area.pack(padx=10, pady=10)
+        text_area.insert(tk.INSERT, json_data)
+
+        # Add a Submit button
+        submit_button = tk.Button(editor_window, text="Submit", command=save_changes)
+        submit_button.pack(pady=5)
+
+        editor_window.mainloop()
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to open and edit the Printers.json file: {e}")
 
 
 def uploadToSFTP(filetoupload):
@@ -184,14 +220,14 @@ def uploadToSFTP(filetoupload):
 
 # Global variables for the control panel to modify
 run_interval = 40
-printers_file = 'Printers.pkl'
+printers_file = 'Printers.json'
 
 def control_panel():
     global run_interval, printers_file
     while True:
         print("\nControl Panel:")
         print("1. Change run interval")
-        print("2. Edit .pkl file")
+        print("2. Edit Printers.json file")
         print("3. Exit")
         choice = input("Enter your choice: ")
         if choice == "1":
@@ -200,7 +236,7 @@ def control_panel():
             start_continuous_thread(printers_file, run_interval)
             print(f"Run interval set to {run_interval} seconds.")
         elif choice == "2":
-            open_and_edit_pkl(printers_file)
+            open_and_edit_json(printers_file)
         elif choice == "3":
             stop_event.set()
             print("Exiting control panel...")

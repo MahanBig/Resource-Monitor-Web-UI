@@ -1,0 +1,44 @@
+[
+    {
+        "IP": "159.171.166.137",
+        "Name": "Bib",
+        "Serial": "",
+        "EID": "",
+        "Default": true
+    },
+    {
+        "IP": "159.171.166.143",
+        "Name": "A8",
+        "Serial": "",
+        "EID": "",
+        "Default": true
+    },
+    {
+        "IP": "159.171.166.142",
+        "Name": "E21",
+        "Serial": "",
+        "EID": "",
+        "Default": true
+    },
+    {
+        "IP": "159.171.166.154",
+        "Name": "Adm",
+        "Serial": "",
+        "EID": "",
+        "Default": true
+    },
+    {
+        "IP": "159.171.166.151",
+        "Name": "A-Gang",
+        "Serial": "",
+        "EID": "",
+        "Default": true
+    },
+    {
+        "IP": "159.171.166.140",
+        "Name": "C-Gang",
+        "Serial": "",
+        "EID": "",
+        "Default": true
+    }
+]
