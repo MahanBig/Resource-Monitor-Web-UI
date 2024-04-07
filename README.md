@@ -3,6 +3,9 @@
 
 Have you ever wanted to monitor your Ricoh branded printers on a neat little webpage for easy viewing, well then this project is just for you.
 
+# Live demo example
+https://moglestu.com/printstatus/
+
 
 
 ## Features
