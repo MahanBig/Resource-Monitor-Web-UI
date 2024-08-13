@@ -1,0 +1,160 @@
+[
+    {
+        "IP": "159.171.166.137",
+        "Name": "Bib",
+        "Serial": "3109R711833",
+        "EID": "",
+        "Default": true,
+        "Time": "13 08 2024, 19:47",
+        "Model": "Error fetching model",
+        "Ink Levels": [
+            "Error fetching ink levels"
+        ],
+        "Tray Information": [
+            "Error fetching tray information"
+        ],
+        "Errors": [
+            "Error fetching errors"
+        ]
+    },
+    {
+        "IP": "159.171.166.159",
+        "Name": "A8",
+        "Serial": "3934P452390",
+        "EID": "",
+        "Default": true,
+        "Time": "13 08 2024, 19:47",
+        "Model": "IM-C300",
+        "Ink Levels": [
+            "100%",
+            "100%",
+            "100%",
+            "100%",
+            "100%"
+        ],
+        "Tray Information": [
+            "-3",
+            "0"
+        ],
+        "Errors": [
+            "Energisparemodus {10033}"
+        ]
+    },
+    {
+        "IP": "159.171.166.156",
+        "Name": "E21",
+        "Serial": "9184R510235",
+        "EID": "",
+        "Default": true,
+        "Time": "13 08 2024, 19:47",
+        "Model": "IM-C5510",
+        "Ink Levels": [
+            "98%",
+            "100%",
+            "98%",
+            "98%",
+            "98%"
+        ],
+        "Tray Information": [
+            "385",
+            "55",
+            "1300",
+            "0"
+        ],
+        "Errors": [
+            "Energisparemodus {10033}"
+        ]
+    },
+    {
+        "IP": "159.171.166.128",
+        "Name": "Adm",
+        "Serial": "3934P452366",
+        "EID": "",
+        "Default": true,
+        "Time": "13 08 2024, 19:47",
+        "Model": "IM-C300",
+        "Ink Levels": [
+            "100%",
+            "100%",
+            "100%",
+            "100%",
+            "100%"
+        ],
+        "Tray Information": [
+            "-3",
+            "0"
+        ],
+        "Errors": [
+            "Energisparemodus {10033}"
+        ]
+    },
+    {
+        "IP": "159.171.166.159",
+        "Name": "A-Gang",
+        "Serial": "3934P452390",
+        "EID": "",
+        "Default": true,
+        "Time": "13 08 2024, 19:47",
+        "Model": "IM-C300",
+        "Ink Levels": [
+            "100%",
+            "100%",
+            "100%",
+            "100%",
+            "100%"
+        ],
+        "Tray Information": [
+            "-3",
+            "0"
+        ],
+        "Errors": [
+            "Energisparemodus {10033}"
+        ]
+    },
+    {
+        "IP": "159.171.166.155",
+        "Name": "C-Gang",
+        "Serial": "3934P452126",
+        "EID": "",
+        "Default": true,
+        "Time": "13 08 2024, 19:47",
+        "Model": "IM-C300",
+        "Ink Levels": [
+            "100%",
+            "100%",
+            "100%",
+            "100%",
+            "100%"
+        ],
+        "Tray Information": [
+            "-3",
+            "0"
+        ],
+        "Errors": [
+            "Energisparemodus {10033}"
+        ]
+    },
+    {
+        "IP": "159.171.166.135",
+        "Name": "E1",
+        "Serial": "3934P550214",
+        "EID": "",
+        "Default": true,
+        "Time": "13 08 2024, 19:47",
+        "Model": "IM-C300",
+        "Ink Levels": [
+            "100%",
+            "100%",
+            "100%",
+            "100%",
+            "100%"
+        ],
+        "Tray Information": [
+            "-3",
+            "0"
+        ],
+        "Errors": [
+            "Energisparemodus {10033}"
+        ]
+    }
+]

@@ -55,12 +55,12 @@ html {
 }
 
 /* Spesifikke bakgrunnsbilder for hver modell */
-.IM-C300 .printer-icon {
-  background-image: url("printer-icon1.png");
+.IM-C300.printer-icon {
+  background-image: url("images/printer-icon1.png");
 }
 
-.IM-C5510 .printer-icon {
-  background-image: url("printer-icon2.png");
+.IM-C5510.printer-icon {
+  background-image: url("images/printer-icon2.png");
 }
 
 .details {

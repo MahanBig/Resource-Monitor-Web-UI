@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .join("");
 
           printerDiv.innerHTML = `
-              <div class="printer-icon ${printer.Model}"></div>
+              <div class="${printer.Model} printer-icon"></div>
               <h2>${printer.Name} (${printer.Model})</h2>
               <div class="details">
                   <div class="detail"><strong>IP:</strong> ${printer.IP}</div>
