@@ -41,7 +41,7 @@ This will be used for the SFTP or FTP login server solution and to upload your j
 #### You will also need the right dependencies and python libraries you will find these in the requirements.txt just pip install them all
 
 ## Config
-To add printers you will need to run the RicohReader.py once and while you have it running in the terinal type in the number 2 and press enter. 
+To add printers you will need to run the RicohReader.py once and while you have it running in the terminal type in the number 2 and press enter. 
 
 You will get a nice json file to edit and you can just do your edits and press submit and relaunch the python file.
 
