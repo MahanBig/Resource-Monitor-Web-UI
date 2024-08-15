@@ -92,9 +92,10 @@ document.addEventListener("DOMContentLoaded", function () {
             .map((count, index) => {
               // Determine class based on count value
               let countClass = "";
-              if (count == 0) {
+              let answer = count == -3 && "Har" || count
+              if (answer == 0) {
                 countClass = "empty";
-              } else if (count < 56) {
+              } else if (answer < 56) {
                 countClass = "almostempty";
               }
 
@@ -103,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function () {
               <div class="tray-counter ${countClass}">
                   <strong class="detail">Skuff ${
                     index + 1
-                  }:</strong><strong> ${count} Ark</strong>
+                  }:</strong><strong> ${answer} Ark</strong>
               </div>
             `;
             })
