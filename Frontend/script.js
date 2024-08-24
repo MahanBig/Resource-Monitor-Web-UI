@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .map((count, index) => {
               // Determine class based on count value
               let countClass = "";
-              let answer = count == -3 && "Har" || count
+              let answer = count == -3 && "Har" || count;
               if (answer == 0) {
                 countClass = "empty";
               } else if (answer < 56) {
@@ -110,23 +110,26 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .join("");
 
-          // Set the image based on the printer model name
-          const imageExtensions = ["png", "jpg", "jpeg", "gif"]; // Array of possible image extensions
-          let imagePath = "images/missing.png"; // Default image
+          // Set the image based on the printer model name with a fallback to missing.png
+          
+          let imagePath = `images/${printer.Model}.png`;
+          if (printer.Model == "Error fetching model"){
+            imagePath = `images/missing.png`;
+          };
+          let img = new Image();
 
-          imageExtensions.some((ext) => {
-            const potentialImagePath = `images/${printer.Model}.${ext}`;
-            const img = new Image();
-            img.src = potentialImagePath;
-            if (img.height > 0) { // Image exists
-              imagePath = potentialImagePath;
-              return true;
-            }
-            return false;
-          });
+            img.onload = function() {
+              // If the image loads successfully, set it as the background
+              printerDiv.querySelector(".printer-icon").style.backgroundImage = `url('${imagePath}')`;
+            };
+            img.onerror = function() {
+              // If the image fails to load, use the missing image
+              printerDiv.querySelector(".printer-icon").style.backgroundImage = `url('images/missing.png')`;
+            };
+            img.src = imagePath;
 
           printerDiv.innerHTML = `
-            <div class="printer-icon" style="background-image: url('${imagePath}');"></div>
+            <div class="printer-icon"></div>
             <h2>${printer.Name} (${printer.Model})</h2>
             <div class="details">
                 <div class="detail"><strong>IP:</strong> ${printer.IP}</div>
@@ -173,3 +176,4 @@ document.addEventListener("DOMContentLoaded", function () {
   // Set up the interval to fetch data every 8 seconds
   intervalId = setInterval(fetchPrinterData, 8000);
 });
+// Made by Mahan Baghdadi
