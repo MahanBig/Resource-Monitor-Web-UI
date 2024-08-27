@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   let intervalId = null; // Holds the interval ID for clearing if needed
+  const imageCache = {}; // Object to cache image paths by model name
 
   const fetchPrinterData = () => {
     fetch("printer_data.json")
@@ -111,45 +112,71 @@ document.addEventListener("DOMContentLoaded", function () {
             .join("");
 
           // Set the image based on the printer model name with a fallback to missing.png
-          
           let imagePath = `images/${printer.Model}.png`;
-          if (printer.Model == "Error fetching model"){
+          if (printer.Model === "Error fetching model") {
             imagePath = `images/missing.png`;
-          };
-          let img = new Image();
+          }
 
+          // Check if the image is cached
+          if (imageCache[printer.Model]) {
+            printerDiv.innerHTML = `
+              <div class="printer-icon" style="background-image: url('${imageCache[printer.Model]}');"></div>
+              <h2>${printer.Name} (${printer.Model})</h2>
+              <div class="details">
+                  <div class="detail"><strong>IP:</strong> ${printer.IP}</div>
+                  <div class="detail"><strong>S/N:</strong> ${
+                    printer.Serial || "N/A"
+                  }</div>
+                  <div class="ink-levels">
+                      <strong>Tonernivå:</strong>
+                      ${inkLevelsHtml}
+                  </div>
+                  <div class="tray-counters">
+                  <strong>Papirmengde:</strong>
+                  ${trayCountersHtml}
+              </div>
+              <div class="detail"><strong>Sist oppdatert:</strong> ${printer.Time}</div>
+              <ul class="errors-list"><strong>Status:</strong> ${printer.Errors.map(
+                (error) => `<li class="error">${error}</li>`
+              ).join("")}</ul>
+            </div>
+          `;
+          } else {
+            let img = new Image();
             img.onload = function() {
-              // If the image loads successfully, set it as the background
+              // If the image loads successfully, cache it and set it as the background
+              imageCache[printer.Model] = imagePath;
               printerDiv.querySelector(".printer-icon").style.backgroundImage = `url('${imagePath}')`;
             };
             img.onerror = function() {
-              // If the image fails to load, use the missing image
+              // If the image fails to load, use the missing image and cache it
+              imageCache[printer.Model] = `images/missing.png`;
               printerDiv.querySelector(".printer-icon").style.backgroundImage = `url('images/missing.png')`;
             };
             img.src = imagePath;
-
-          printerDiv.innerHTML = `
-            <div class="printer-icon"></div>
-            <h2>${printer.Name} (${printer.Model})</h2>
-            <div class="details">
-                <div class="detail"><strong>IP:</strong> ${printer.IP}</div>
-                <div class="detail"><strong>S/N:</strong> ${
-                  printer.Serial || "N/A"
-                }</div>
-                <div class="ink-levels">
-                    <strong>Tonernivå:</strong>
-                    ${inkLevelsHtml}
-                </div>
-                <div class="tray-counters">
-                <strong>Papirmengde:</strong>
-                ${trayCountersHtml}
+            printerDiv.innerHTML = `
+              <div class="printer-icon"></div>
+              <h2>${printer.Name} (${printer.Model})</h2>
+              <div class="details">
+                  <div class="detail"><strong>IP:</strong> ${printer.IP}</div>
+                  <div class="detail"><strong>S/N:</strong> ${
+                    printer.Serial || "N/A"
+                  }</div>
+                  <div class="ink-levels">
+                      <strong>Tonernivå:</strong>
+                      ${inkLevelsHtml}
+                  </div>
+                  <div class="tray-counters">
+                  <strong>Papirmengde:</strong>
+                  ${trayCountersHtml}
+              </div>
+              <div class="detail"><strong>Sist oppdatert:</strong> ${printer.Time}</div>
+              <ul class="errors-list"><strong>Status:</strong> ${printer.Errors.map(
+                (error) => `<li class="error">${error}</li>`
+              ).join("")}</ul>
             </div>
-            <div class="detail"><strong>Sist oppdatert:</strong> ${printer.Time}</div>
-            <ul class="errors-list"><strong>Status:</strong> ${printer.Errors.map(
-              (error) => `<li class="error">${error}</li>`
-            ).join("")}</ul>
-        </div>
-    `;
+          `;
+          }
 
           container.appendChild(printerDiv);
           const EmptyPaper = printerDiv.textContent.includes("{13200}") &&
