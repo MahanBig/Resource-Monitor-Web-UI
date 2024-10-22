@@ -13,6 +13,7 @@ https://moglestu.com/printstatus/
 - Python backend
 - Easy to view frontend website
 - Less headaches
+- Badly written code
 - Very cool
 
 ## What you will need
@@ -38,6 +39,7 @@ This will be used for the SFTP or FTP login server solution and to upload your j
     "path": "/Path/in/server"
   }
 ```
+#### The printer images you provide HAVE to be .png files and they need to be the exact name of the printer like if the printer is called "CS 3000" the png file for the image needs to be called "CS-3000.png" for example
 #### You will also need the right dependencies and python libraries you will find these in the requirements.txt just pip install them all
 
 ## Config
