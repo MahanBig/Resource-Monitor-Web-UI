@@ -1,251 +1,219 @@
-import threading
-import time
 import json
 import os
-from puresnmp import walk, get
-import tkinter as tk
-from tkinter import scrolledtext
-from tkinter import messagebox
-import paramiko
+import threading
+import time
 from datetime import datetime
+from tkinter import messagebox, scrolledtext
+import tkinter as tk
 
-# Initialize a threading event and a reference to the continuous execution thread
-stop_event = threading.Event()
-continuous_thread = None
-print(os.getcwd())
+import paramiko
+from puresnmp import get, walk
 
-def fetch_and_export_printers(printers, model_OID, ink_levels_base_OID, tray_current_capacity_base_OID, error_base_OID):
-    now = datetime.now()
-    currenttime = now.strftime('%d %m %Y, %H:%M')
-    printer_data = []
-    for printer in printers:
-        printer_info = {
-            "IP": printer["IP"],
-            "Name": printer["Name"],
-            "Serial": printer["Serial"],
-            "EID": printer["EID"],
-            "Default": printer["Default"],
-            "Time": currenttime
+# --- Configuration ---
+
+# OID (Object Identifier) constants for SNMP requests
+MODEL_OID = ".1.3.6.1.2.1.43.5.1.1.16.1"
+INK_LEVELS_BASE_OID = ".1.3.6.1.2.1.43.11.1.1.9.1"
+TRAY_CAPACITY_BASE_OID = ".1.3.6.1.2.1.43.8.2.1.10.1"
+ERROR_BASE_OID = ".1.3.6.1.2.1.43.18.1.1.8.1"
+
+# --- Helper Functions ---
+
+def load_config(file_path: str) -> dict:
+    """Loads a JSON configuration file."""
+    try:
+        with open(file_path, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Error loading {file_path}: {e}")
+        return {}
+
+# --- Classes ---
+
+class Printer:
+    """Represents a single printer and its SNMP data."""
+
+    def __init__(self, ip: str, name: str, serial: str, eid: str, default: bool):
+        self.ip = ip
+        self.name = name
+        self.serial = serial
+        self.eid = eid
+        self.default = default
+
+    def _fetch_snmp_data(self, oid: str, is_walk: bool = False) -> list | str:
+        """Fetches data from the printer using SNMP."""
+        try:
+            if is_walk:
+                return [item[1] for item in walk(self.ip, "public", oid) if item]
+            return get(self.ip, "public", oid).decode("utf-8", errors="ignore")
+        except Exception as e:
+            return f"Error fetching data: {e}"
+
+    def get_data(self) -> dict:
+        """Retrieves all monitored data for the printer."""
+        now = datetime.now().strftime("%d %m %Y, %H:%M")
+        model = self._fetch_snmp_data(MODEL_OID)
+        ink_levels = self._fetch_snmp_data(INK_LEVELS_BASE_OID, is_walk=True)
+        tray_info = self._fetch_snmp_data(TRAY_CAPACITY_BASE_OID, is_walk=True)
+        errors = self._fetch_snmp_data(ERROR_BASE_OID, is_walk=True)
+
+        return {
+            "IP": self.ip,
+            "Name": self.name,
+            "Serial": self.serial,
+            "EID": self.eid,
+            "Default": self.default,
+            "Time": now,
+            "Model": model.replace(" ", "-") if isinstance(model, str) else model,
+            "Ink Levels": [f"{level}%" for level in ink_levels] if isinstance(ink_levels, list) else [ink_levels],
+            "Tray Information": tray_info if isinstance(tray_info, list) else [tray_info],
+            "Errors": [err.decode("utf-8", errors="ignore") for err in errors] if isinstance(errors, list) else [errors],
         }
 
-        # SNMP fetch model
+class SFTPServer:
+    """Handles the connection and file uploading to an SFTP server."""
+
+    def __init__(self, credentials: dict):
+        self.host = credentials.get("host")
+        self.port = credentials.get("port", 22)
+        self.user = credentials.get("user")
+        self.password = credentials.get("pass")
+        self.path = credentials.get("path")
+
+    def upload_file(self, local_path: str):
+        """Uploads a file to the SFTP server."""
+        if not all([self.host, self.user, self.password, self.path]):
+            print("SFTP credentials are not fully configured.")
+            return
+
         try:
-            model = get(printer['IP'], 'public', model_OID).decode('utf-8', errors='ignore')
-            formattedModelName = model.replace(" ", "-")
-            printer_info["Model"] = formattedModelName
+            with paramiko.SSHClient() as ssh:
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(self.host, port=self.port, username=self.user, password=self.password)
+                with ssh.open_sftp() as sftp:
+                    sftp.chdir(self.path)
+                    remote_path = os.path.basename(local_path)
+                    sftp.put(local_path, remote_path)
+                    print(f"Successfully uploaded {local_path} to {self.path}")
         except Exception as e:
-            printer_info["Model"] = "Error fetching model"
+            print(f"Failed to upload file to SFTP server: {e}")
 
-        # SNMP fetch ink levels
+class PrinterMonitor:
+    """Monitors a list of printers and exports their data."""
+
+    def __init__(self, printers_file: str, credentials_file: str):
+        self.printers_file = printers_file
+        self.credentials_file = credentials_file
+        self.printers = self._load_printers()
+        self.sftp_server = SFTPServer(load_config(self.credentials_file))
+
+    def _load_printers(self) -> list[Printer]:
+        """Loads the list of printers from the configuration file."""
+        printers_config = load_config(self.printers_file)
+        return [Printer(**p) for p in printers_config] if printers_config else []
+
+    def fetch_and_export_data(self):
+        """Fetches data from all printers and exports it to a JSON file."""
+        printer_data = [printer.get_data() for printer in self.printers]
+        output_file = "printer_data.json"
+
         try:
-            ink_levels = [str(item[1]) + '%' for item in walk(printer['IP'], 'public', ink_levels_base_OID) if item]
-            printer_info["Ink Levels"] = ink_levels
-        except Exception as e:
-            printer_info["Ink Levels"] = ["Error fetching ink levels"]
+            with open(output_file, "w") as f:
+                json.dump(printer_data, f, indent=4)
+            print(f"Data exported to {output_file} successfully.")
+            self.sftp_server.upload_file(output_file)
+        except IOError as e:
+            print(f"Error saving data to {output_file}: {e}")
 
-        # SNMP fetch tray information
+# --- GUI and Control ---
+
+class ControlPanel:
+    """A simple Tkinter control panel for the application."""
+
+    def __init__(self, monitor: PrinterMonitor):
+        self.monitor = monitor
+        self.run_interval = 40
+        self.stop_event = threading.Event()
+        self.continuous_thread = None
+
+    def _continuous_execution(self):
+        """The main loop for continuously fetching data."""
+        while not self.stop_event.is_set():
+            self.monitor.fetch_and_export_data()
+            time.sleep(self.run_interval)
+
+    def start_continuous_thread(self):
+        """Starts the data fetching thread."""
+        if self.continuous_thread and self.continuous_thread.is_alive():
+            self.stop_event.set()
+            self.continuous_thread.join()
+        self.stop_event.clear()
+        self.continuous_thread = threading.Thread(target=self._continuous_execution)
+        self.continuous_thread.daemon = True
+        self.continuous_thread.start()
+
+    def open_and_edit_json(self):
+        """Opens a Tkinter window to edit the printers JSON file."""
         try:
-            tray_info = [str(item[1]) for item in walk(printer['IP'], 'public', tray_current_capacity_base_OID)]
-            printer_info["Tray Information"] = tray_info
+            with open(self.monitor.printers_file, "r") as f:
+                json_data = f.read()
+
+            editor_window = tk.Tk()
+            editor_window.title(f"Edit {self.monitor.printers_file}")
+            text_area = scrolledtext.ScrolledText(editor_window, wrap=tk.WORD, width=80, height=20)
+            text_area.pack(padx=10, pady=10)
+            text_area.insert(tk.INSERT, json_data)
+
+            def save_changes():
+                try:
+                    edited_data = json.loads(text_area.get(1.0, tk.END))
+                    with open(self.monitor.printers_file, "w") as f:
+                        json.dump(edited_data, f, indent=4)
+                    messagebox.showinfo("Success", f"Successfully updated {self.monitor.printers_file}.")
+                    editor_window.destroy()
+                    self.monitor.printers = self.monitor._load_printers()  # Reload printers
+                except (IOError, json.JSONDecodeError) as e:
+                    messagebox.showerror("Error", f"Failed to save the file: {e}")
+
+            submit_button = tk.Button(editor_window, text="Submit", command=save_changes)
+            submit_button.pack(pady=5)
+            editor_window.mainloop()
         except Exception as e:
-            printer_info["Tray Information"] = ["Error fetching tray information"]
+            messagebox.showerror("Error", f"Failed to open the file: {e}")
 
-        # SNMP fetch errors
-        try:
-            errors = [item[1].decode('utf-8', errors='ignore') for item in walk(printer['IP'], 'public', error_base_OID)]
-            printer_info["Errors"] = errors
-        except Exception as e:
-            printer_info["Errors"] = ["Error fetching errors"]
+    def run(self):
+        """Starts the control panel loop."""
+        self.start_continuous_thread()
+        while True:
+            print("\nControl Panel:")
+            print("1. Change run interval")
+            print("2. Edit Printers.json file")
+            print("3. Exit")
+            choice = input("Enter your choice: ")
 
-        printer_data.append(printer_info)
+            if choice == "1":
+                try:
+                    new_interval = int(input("New run interval (seconds): "))
+                    self.run_interval = new_interval
+                    self.start_continuous_thread()
+                    print(f"Run interval set to {self.run_interval} seconds.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+            elif choice == "2":
+                self.open_and_edit_json()
+            elif choice == "3":
+                self.stop_event.set()
+                print("Exiting control panel...")
+                break
+            else:
+                print("Invalid choice. Please select 1, 2, or 3.")
 
-    # Export data to JSON
-    file_path = 'printer_data.json'
-    try:
-        with open(file_path, 'w') as json_file:
-            json.dump(printer_data, json_file, indent=4)
-        print(f"Data exported to {file_path} successfully.")
-    except:
-        print("Something went wrong with saving")
-    try:
-        uploadToSFTP(file_path)
-    except:
-        print("Went wrong with upload")
-
-def load_printers(file_path):
-    try:
-        with open(file_path, 'rb') as f:
-            printers = json.load(f)
-    except Exception as e:
-        printers = []  # Fallback to an empty list if loading fails
-        print(f"Error loading printers from {file_path}: {e}")
-    return printers
-
-def continuous_execution(file_path, interval, stop_event):
-    global continuous_thread
-    while not stop_event.is_set():
-        printers = load_printers(file_path)
-        # Example OIDs, replace with actual OIDs for your printers
-        model_OID = '.1.3.6.1.2.1.43.5.1.1.16.1'
-        ink_levels_base_OID = '.1.3.6.1.2.1.43.11.1.1.9.1'
-        tray_current_capacity_base_OID = '.1.3.6.1.2.1.43.8.2.1.10.1'
-        error_base_OID = '.1.3.6.1.2.1.43.18.1.1.8.1'
-        fetch_and_export_printers(printers, model_OID, ink_levels_base_OID, tray_current_capacity_base_OID, error_base_OID)
-        time.sleep(interval)
-
-def start_continuous_thread(file_path, interval):
-    global stop_event, continuous_thread
-    if continuous_thread is not None:
-        stop_event.set()
-        continuous_thread.join()
-    stop_event.clear()
-    continuous_thread = threading.Thread(target=continuous_execution, args=(file_path, interval, stop_event))
-    continuous_thread.daemon = True
-    continuous_thread.start()
-
-
-
-def open_and_edit_json(file_path):
-    try:
-        
-        with open(file_path, 'r') as f:  # Open the file in read mode
-            data = json.load(f)  # Load the data using json
-
-        # Convert data to a JSON string for editing, if needed
-        json_data = json.dumps(data, indent=4)
-
-        def save_changes():
-            try:
-                edited_data = json.loads(text_area.get(1.0, tk.END))
-                with open(file_path, 'w') as f:  # Open the file in write mode
-                    json.dump(edited_data, f, indent=4)  # Dump the edited data back into the file
-                messagebox.showinfo("Success", "Successfully updated the JSON file.")
-                editor_window.destroy()
-                # You might need to adjust the following line according to your application's needs
-                # start_continuous_thread(printers_file, run_interval)  # Restart thread to use updated data
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save the JSON file: {e}")
-
-        # Create a Tkinter window
-        editor_window = tk.Tk()
-        editor_window.title("Edit JSON File")
-
-        # Add a scrolled text widget
-        text_area = scrolledtext.ScrolledText(editor_window, wrap=tk.WORD, width=80, height=20)
-        text_area.pack(padx=10, pady=10)
-        text_area.insert(tk.INSERT, json_data)
-
-        # Add a Submit button
-        submit_button = tk.Button(editor_window, text="Submit", command=save_changes)
-        submit_button.pack(pady=5)
-
-        editor_window.mainloop()
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to open and edit the JSON file: {e}")
-    try:
-        with open(file_path, 'rb') as f:
-            data = json.load(f)
-        # Convert data to a JSON string for editing
-        json_data = json.dumps(data, indent=4)
-
-        def save_changes():
-            try:
-                edited_data = json.loads(text_area.get(1.0, tk.END))
-                with open(file_path, 'wb') as f:
-                    json.dump(edited_data, f)
-                messagebox.showinfo("Success", "Successfully updated the Printers.json file.")
-                editor_window.destroy()
-                start_continuous_thread(printers_file, run_interval)  # Restart thread to use updated data
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save the Printers.json file: {e}")
-
-        # Create a Tkinter window
-        editor_window = tk.Tk()
-        editor_window.title("Edit Printers.json File")
-
-        # Add a scrolled text widget
-        text_area = scrolledtext.ScrolledText(editor_window, wrap=tk.WORD, width=80, height=20)
-        text_area.pack(padx=10, pady=10)
-        text_area.insert(tk.INSERT, json_data)
-
-        # Add a Submit button
-        submit_button = tk.Button(editor_window, text="Submit", command=save_changes)
-        submit_button.pack(pady=5)
-
-        editor_window.mainloop()
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to open and edit the Printers.json file: {e}")
-
-
-def uploadToSFTP(filetoupload):
-    # SFTP server details
-    f = open('credentials.json')
-    credentials = json.load(f)
-
-    sftp_server = credentials['host']
-    sftp_port = credentials['port']  # Default SFTP port
-    sftp_username = credentials['user']
-    sftp_password = credentials['pass']
-    sftp_target_path = credentials['path']  # Target directory on SFTP server
-
-    # Initialize SSH client
-    ssh = paramiko.SSHClient()
-    # Automatically add host key
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    # Connect to the server
-    try:
-        ssh.connect(sftp_server, port=sftp_port, username=sftp_username, password=sftp_password)
-        sftp = ssh.open_sftp()
-        
-        # Change to the target directory on the SFTP server
-        sftp.chdir(sftp_target_path)
-        
-        # Get the filename to use on the SFTP server
-        filename = os.path.basename(filetoupload)
-        # Upload the file
-        sftp.put(filetoupload, filename)
-        
-        print(f"Uploaded {filetoupload} to SFTP server at {sftp_target_path}")
-        
-        # Close the SFTP session and SSH connection
-        sftp.close()
-        ssh.close()
-    except Exception as e:
-        print(f"Failed to upload file to SFTP server: {e}")
-        # Close the SFTP session and SSH connection in case of failure
-        sftp.close()
-        ssh.close()
-
-
-# Global variables for the control panel to modify
-run_interval = 40
-printers_file = 'Printers.json'
-
-def control_panel():
-    global run_interval, printers_file
-    while True:
-        print("\nControl Panel:")
-        print("1. Change run interval")
-        print("2. Edit Printers.json file")
-        print("3. Exit")
-        choice = input("Enter your choice: ")
-        if choice == "1":
-            new_interval = int(input("New run interval (seconds): "))
-            run_interval = new_interval
-            start_continuous_thread(printers_file, run_interval)
-            print(f"Run interval set to {run_interval} seconds.")
-        elif choice == "2":
-            open_and_edit_json(printers_file)
-        elif choice == "3":
-            stop_event.set()
-            print("Exiting control panel...")
-            break
-        else:
-            print("Invalid choice, please select 1, 2, or 3.")
+# --- Main Execution ---
 
 if __name__ == "__main__":
-# Accessing the password (assuming the JSON structure includes a "password" field)
-    start_continuous_thread(printers_file, run_interval)
-    control_panel()
+    printers_file = "Printers.json"
+    credentials_file = "credentials.json"
+    
+    monitor = PrinterMonitor(printers_file, credentials_file)
+    panel = ControlPanel(monitor)
+    panel.run()
