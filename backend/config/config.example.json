@@ -1,0 +1,19 @@
+{
+  "interval": 40,
+  "printers_file": "printers.json",
+  "snmp_community": "public",
+  "snmp_timeout": 3.0,
+  "max_workers": 8,
+  "output_file": "printer_data.json",
+  "sftp": {
+    "host": "ditt-webhotell.eksempel.no",
+    "port": 22,
+    "user": "sftp_bruker",
+    "pass": "sftp_passord_her",
+    "path": "/public_html/"
+  },
+  "logger": {
+    "url": "https://ditt-webhotell.eksempel.no/api/process-printers.php",
+    "key": "BYTT_TIL_EN_LANG_TILFELDIG_NOKKEL"
+  }
+}

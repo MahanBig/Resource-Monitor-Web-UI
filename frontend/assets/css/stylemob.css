@@ -1,0 +1,5 @@
+/* ==============================================================================
+   stylemob.css - Legacy mobil-stilark (v3.1)
+   Alle responsive regler er nå integrert direkte i style.css for maksimal ytelse.
+   ============================================================================== */
+@import url("style.css");

@@ -1,0 +1,17 @@
+services:
+  collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ricoh-collector
+    restart: unless-stopped
+    # host-nettverk er anbefalt på Linux/Raspberry Pi for problemfri SNMP mot lokalt subnett:
+    # network_mode: host
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./printers.json:/app/printers.json
+    environment:
+      - POLL_INTERVAL=40
+      - SNMP_COMMUNITY=public
+      - SNMP_TIMEOUT=3.0
+      - PYTHONUNBUFFERED=1

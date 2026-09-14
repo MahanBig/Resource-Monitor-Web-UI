@@ -1,0 +1,23 @@
+[
+  {
+    "IP": "192.168.1.101",
+    "Name": "Bibliotek",
+    "Serial": "G12345678",
+    "EID": "BIB-01",
+    "Default": true
+  },
+  {
+    "IP": "192.168.1.102",
+    "Name": "Administrasjon",
+    "Serial": "G87654321",
+    "EID": "ADM-01",
+    "Default": true
+  },
+  {
+    "IP": "192.168.1.103",
+    "Name": "Koprom 2. etg",
+    "Serial": "G11223344",
+    "EID": "KOP-02",
+    "Default": true
+  }
+]

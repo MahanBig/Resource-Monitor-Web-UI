@@ -1,65 +1,124 @@
-# Ricoh-Resource-Monitor
+# Del 1: Ricoh SNMP Collector (Backend)
 
-[![Build Status](https://travis-ci.org/4rm/Ricoh-Resource-Monitor.svg?branch=master)](https://travis-ci.org/4rm/Ricoh-Resource-Monitor) [![Github Release](https://img.shields.io/github/release/4rm/Ricoh-resource-monitor.svg?color=leaf)](https://github.com/4rm/Ricoh-Resource-Monitor/releases) [![Github All Releases](https://img.shields.io/github/downloads/4rm/Ricoh-Resource-Monitor/total.svg)]() [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+Dette er innsamlingsmodulen (Server 1) som kjører på et lokalt nettverk (f.eks. en Raspberry Pi eller intern server) med nettverkstilgang til Ricoh-kopimaskinene via SNMP.
 
-GUI to monitor ink and paper tray levels at work. Values are gathered using SNMP and displayed using TkInter.
+Den samler data fra maskinene parallelt, eksporterer `printer_data.json`, laster filen opp til webserveren via SFTP og sender hendelsesdata til PHP-loggeren via HTTP POST.
 
-<img src="https://i.imgur.com/lmd6ghC.png" alt="Ricoh Resource Monitor screenshot">
+---
 
-<table>
-<tr><td><ul>
-<b><p align="center">Contents</p></b>
-<li><a href="#Tech">Technology used</a></li>
-<li><a href="#How">How it works</a></li>
-  <ul><li><a href="Editing">Editing printer list</a></li></ul>
-<li><a href="#Known">Known Issues</a></li>
-<li><a href="#Thanks">Thanks</a></li>
-</ul></td></tr>
-</table>
+## Egenskaper
 
-## <a name="Tech">Technology used</a>
+* **Parallell SNMP-polling**: Henter status fra alle maskiner samtidig med tråd-pool. Én offline maskin vil aldri sinke resten!
+* **Rent JSON-oppsett**: Kopimaskiner defineres i en enkel, menneskelig lesbar `printers.json` (automatisk migrasjon fra eldre `Printers.pkl`).
+* **Atomisk SFTP-opplasting**: Laster opp til `.uploading` før atomisk omdøping slik at webfrontenden aldri leser en halv fil.
+* **Integrert simulator**: Kan kjøres med `--simulate` for testing og demo uten tilkoblede kopimaskiner.
+* **Menneskevennlig CLI**: Støtte for `--test-snmp`, `--test-sftp`, `--test-logger`, `--once` og interaktiv terminalmeny (`--menu`).
+* **Docker & systemd**: Ferdig Dockerfile, docker-compose og systemd-oppskrift for 24/7 drift.
 
-<table>
-  <tr>
-  <td><a href="https://github.com/exhuma/puresnmp">puresnmp</a> (1.5.1) </td>
-    <td>Python SNMPv2 Library </td>
-  </tr>
-  <tr>
-  <td><a href="https://github.com/takaakiaoki/bundlepmw">takaakiaoki's bundlepmw</a></td>
-    <td>Modernized Pmw bundle</td>
-  </tr>
-</table>
+---
 
-## <a name="How">How it works</a>
+## Installasjon (Manuell på Raspberry Pi / Linux)
 
-All of the printers are networked with publicly available SNMP values. As long as the host machine is on the same network, this program grabs the values using generic OIDs and displays them in a nice TkInter window. OIDs used are as follows:
+### 1. Klon eller kopier koden
+```bash
+cd /opt/ricoh-monitor/Backend
+```
 
-|OID|Value|Method|
-|-|-|-|
-|Serial Number|.1.3.6.1.2.1.43.5.1.1.17.1|Get|
-|Printer Model|.1.3.6.1.2.1.43.11.1.1.6|Get|
-|Ink Names|.1.3.6.1.2.1.43.11.1.1.6|Walk|
-|Ink Levels|.1.3.6.1.2.1.43.11.1.1.9.1|Walk|
-|Tray Names|.1.3.6.1.2.1.43.8.2.1.13|Walk|
-|Current Tray Fill|.1.3.6.1.2.1.43.8.2.1.10.1|Walk|
-|Max Tray Fill|.1.3.6.1.2.1.43.8.2.1.9.1|Walk|
-|Printer Errors|.1.3.6.1.2.1.43.18.1.1.8.1|Walk|
+### 2. Installer Python-avhengigheter
+```bash
+pip3 install -r requirements.txt
+```
 
-### <a name="Editing">Editing printer list</a>
+### 3. Konfigurer innstillinger
+Kopier eksempel-filene:
+```bash
+cp config.example.json config.json
+cp printers.example.json printers.json
+```
 
-You can add or remove a printer by going to `File -> Edit Printer List`
+Rediger `config.json` med dine SFTP- og Logger-detaljer:
+```json
+{
+  "interval": 40,
+  "printers_file": "printers.json",
+  "sftp": {
+    "host": "ditt-webhotell.no",
+    "port": 22,
+    "user": "sftp_bruker",
+    "pass": "hemmelig",
+    "path": "/public_html/"
+  },
+  "logger": {
+    "url": "https://ditt-webhotell.no/api/process-printers.php",
+    "key": "EN_LANG_TILFELDIG_NOKKEL"
+  }
+}
+```
 
-<img src="https://user-images.githubusercontent.com/3399474/117365336-26d44780-ae8d-11eb-8d9e-06d80bc00340.png" alt="Printer list screenshot" width=450>
+Legg inn kopimaskinene i `printers.json`:
+```json
+[
+  {
+    "IP": "192.168.1.101",
+    "Name": "Bibliotek",
+    "Serial": "G12345678",
+    "EID": "BIB-01",
+    "Default": true
+  }
+]
+```
 
-To add a printer, the `Name`, `IP`, and `Default` fields are required; the `Serial` and `EID` fields are not, so their spaces can be left blank, eg: `123.12.123.123,My Printer,,,True`. The `Default` field determines whether the printer is loaded by default when launching the program.
+### 4. Test tilkoblingene
+```bash
+# Test at maskinene svarer på SNMP:
+python3 RicohReader.py --test-snmp
 
-`Reset Field` will return the printer list to its default state as of 5/6/21.
+# Test SFTP-tilkobling til webserveren:
+python3 RicohReader.py --test-sftp
 
-## <a name="Known">Known Issues</a>
+# Test logger-API-et på webserveren:
+python3 RicohReader.py --test-logger
+```
 
-- Printers will not report paper level changes unless they've been woken from Energy Saver Mode
-- Some trays are split into left- and right-hand compartments, but Ricoh reports their fill levels as one value
-- Log file may not be created in some locations unless RRM is launched as administrator
+### 5. Kjør som systemd-tjeneste (24/7 automatisk oppstart)
+```bash
+sudo cp systemd/ricoh-reader.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ricoh-reader
+```
 
-## <a name="Thanks">Thanks</a>
-Thanks to takaakiaoki for their frozen [Pmw.py module](https://github.com/takaakiaoki/bundlepmw), which was needed to create the standalone .exe with pyinstaller.
+Sjekk status og logg:
+```bash
+sudo systemctl status ricoh-reader
+journalctl -u ricoh-reader -f
+```
+
+---
+
+## Kjøre med Docker
+
+Bygg og start containeren:
+```bash
+docker compose up -d --build
+```
+
+Se logger:
+```bash
+docker compose logs -f
+```
+
+---
+
+## Kommandolinjevalg
+
+| Flagg | Beskrivelse |
+| :--- | :--- |
+| `python RicohReader.py` | Starter kontinuerlig innsamling med konfigurert intervall (standard 40 sek). |
+| `--once` | Kjører én runde og avslutter (ypperlig for cron jobs eller rask sjekk). |
+| `--simulate` | Kjører med simulerte Ricoh-maskiner (krever ingen SNMP). |
+| `--test-snmp` | Pinger og tester SNMP mot alle definerte maskiner. |
+| `--test-sftp` | Tester SFTP-innlogging og skrivetilgang på webserveren. |
+| `--test-logger` | Tester HTTP POST mot PHP-loggeren med konfigurert nøkkel. |
+| `--menu` | Åpner et interaktivt terminal-kontrollpanel. |
+| `--export-json` | Konverterer eldre `Printers.pkl` til `printers.json`. |
+| `--verbose` | Viser detaljert debug-logging i terminalen. |

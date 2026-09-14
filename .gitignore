@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+
+# Sensitiv konfigurasjon
+config.json
+credentials.json
+api/config.php
+
+# Midlertidige datafiler
+*.uploading
+.ricoh_sftp_test
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

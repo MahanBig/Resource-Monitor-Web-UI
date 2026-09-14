@@ -1,0 +1,41 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ricoh-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=ricoh_db
+      - DB_USER=ricoh_user
+      - DB_PASS=ricoh_hemmelig_passord
+      - LOGGER_KEY=bytt_til_en_lang_hemmelig_nokkel_her
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./printer_data.json:/var/www/html/printer_data.json
+
+  db:
+    image: mariadb:10.11
+    container_name: ricoh-mariadb
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD=root_super_passord
+      - MARIADB_DATABASE=ricoh_db
+      - MARIADB_USER=ricoh_user
+      - MARIADB_PASSWORD=ricoh_hemmelig_passord
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mariadb_data:

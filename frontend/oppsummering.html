@@ -1,42 +1,69 @@
-
-
 <!DOCTYPE html>
 <html lang="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kopimaskin oppsummering</title>
+  <title>Kopimaskin oppsummering - Kiosk</title>
+  <meta name="description" content="Kompakt veggoversikt for Ricoh-kopimaskiner">
   <meta name="robots" content="noindex, nofollow">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="icon" href="images/logo.png" type="image/x-icon">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="stylemob.css" media="only screen and (max-width: 768px)">
-  <script src="script.js" defer></script>
+  <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <meta name="theme-color" content="#111827">
+  <script src="assets/js/app.js" defer></script>
 </head>
-<body class="summary-view">
-  <a href="/status/" class="header-link">
-    <header>
-      <h1>Kopimaskin oppsummering</h1>
-      <img src="images/bedrift_banner.png" class="header-icon" id="headerIcon" alt="Header Icon">
-    </header>
-  </a>
+<body class="dark-mode summary-view">
 
-  <div class="controls">
-    <button id="toggleButton">Vis alle kopimaskiner</button>
-    <div class="search-container">
-      <input type="text" id="searchBox" placeholder="Søk etter kopimaskiner...">
-      <button id="clearButton">✖</button>
+  <header class="top-navbar">
+    <div class="brand-wrapper">
+      <a href="index.html" class="brand-wrapper" title="Tilbake til hovedoversikten">
+        <img src="assets/images/favicon-96x96.png" class="brand-logo" alt="Logo">
+        <h1 class="brand-title">
+          Kopimaskin oppsummering
+          <span class="brand-badge">Kiosk</span>
+        </h1>
+      </a>
+      <div class="live-status-pill">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        <span id="liveStatusText">Live oppdatering</span>
+      </div>
     </div>
+
+    <div class="top-actions">
+      <a href="index.html" class="action-btn" title="Gå til detaljert visning">
+        ⬅ Hovedvisning
+      </a>
+      <button id="darkModeToggle" class="action-btn" type="button" title="Bytt tema">
+        🌙
+      </button>
+    </div>
+  </header>
+
+  <div class="main-wrapper">
+    <div class="control-bar" style="margin-bottom: 1.5rem;">
+      <div class="filters-group">
+        <button id="toggleButton" class="filter-chip active" type="button">
+          Vis oppsummering
+        </button>
+      </div>
+      <div class="search-container">
+        <span class="search-icon-left" aria-hidden="true">🔍</span>
+        <input type="text" id="searchBox" class="search-input" placeholder="Filtrer maskiner...">
+        <button id="clearButton" class="search-clear-btn" type="button" hidden>✖</button>
+      </div>
+    </div>
+
+    <div id="no-errors-message" class="no-errors-message">
+      <img src="assets/images/celebrate.gif" alt="Feiring">
+      <h2>Ingen feil registrert! Alt fungerer utmerket.</h2>
+      <p>Alle kopimaskiner har god status.</p>
+    </div>
+
+    <div id="printerSummary" class="printer-summary show-summary"></div>
+    <div id="printerInfo" class="printer-container"></div>
   </div>
 
-  <div id="no-errors-message" class="no-errors-message">
-    <img src="images/celebrate.gif" alt="Celebrate">
-    <h2>Ingen feil registrert, så bra!!</h2>
-  </div>
-  <div id="printerInfo" class="printer-container"></div>
-  <div id="printerSummary" class="printer-summary show-summary"></div>
 </body>
 </html>

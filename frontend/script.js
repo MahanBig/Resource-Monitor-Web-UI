@@ -1,64 +1,77 @@
-document.addEventListener("DOMContentLoaded", function () {
+/**
+ * ==============================================================================
+ * Ricoh Kopimaskin Status - Frontend Skript (v3.1)
+ * ==============================================================================
+ * Robust, modulær og moderne frontend-kontroller for sanntidsovervåking av
+ * Ricoh-kopimaskiner via SNMP.
+ */
+
+document.addEventListener("DOMContentLoaded", () => {
+  // DOM-elementer
   const container = document.getElementById("printerInfo");
   const noErrorsMessage = document.getElementById("no-errors-message");
   const summaryContainer = document.getElementById("printerSummary");
   const searchBox = document.getElementById("searchBox");
   const clearButton = document.getElementById("clearButton");
-  const searchContainer = document.querySelector(".search-container");
+  const toggleButton = document.getElementById("toggleButton");
+  const filterAllBtn = document.getElementById("filterAllBtn");
+  const filterCriticalBtn = document.getElementById("filterCriticalBtn");
+  const refreshCountdown = document.getElementById("refreshCountdown");
+  const pulseDot = document.getElementById("pulseDot");
+  const totalBadgeCount = document.getElementById("totalBadgeCount");
+  const errorBadgeCount = document.getElementById("errorBadgeCount");
+  const criticalBadgeCount = document.getElementById("criticalBadgeCount");
 
-  let showAllPrinters = false;
+  // Tilstand
+  let currentFilter = "auto"; // "auto" (kun feil), "all" (alle), "critical" (kun kritiske)
   const expandedPrinters = new Set();
+  let countdownSeconds = 8;
+  let pollIntervalId = null;
+  let countdownIntervalId = null;
 
-/* --- Installer nettsiden som app / PWA --- */
-const installAppButton = document.getElementById("installAppButton");
-let deferredInstallPrompt = null;
+  /* ==========================================================================
+     1. PWA - Installer nettsiden som app
+     ========================================================================== */
+  const installAppButton = document.getElementById("installAppButton");
+  let deferredInstallPrompt = null;
 
-const isRunningAsApp =
-  window.matchMedia("(display-mode: standalone)").matches ||
-  window.matchMedia("(display-mode: fullscreen)").matches ||
-  window.matchMedia("(display-mode: minimal-ui)").matches ||
-  window.matchMedia("(display-mode: window-controls-overlay)").matches ||
-  window.navigator.standalone === true;
+  const isRunningAsApp =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.navigator.standalone === true;
 
-if (isRunningAsApp && installAppButton) {
-  installAppButton.hidden = true;
-}
-
-window.addEventListener("beforeinstallprompt", (event) => {
-  event.preventDefault();
-
-  deferredInstallPrompt = event;
-
-  if (installAppButton) {
-    installAppButton.hidden = false;
-  }
-});
-
-if (installAppButton) {
-  installAppButton.addEventListener("click", async () => {
-    if (!deferredInstallPrompt) return;
-
-    deferredInstallPrompt.prompt();
-
-    const result = await deferredInstallPrompt.userChoice;
-    console.log("PWA installasjon:", result.outcome);
-
-    deferredInstallPrompt = null;
+  if (isRunningAsApp && installAppButton) {
     installAppButton.hidden = true;
+  }
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    if (installAppButton && !isRunningAsApp) {
+      installAppButton.hidden = false;
+    }
   });
-}
-
-window.addEventListener("appinstalled", () => {
-  console.log("Printerstatus er installert som app.");
-
-  deferredInstallPrompt = null;
 
   if (installAppButton) {
-    installAppButton.hidden = true;
+    installAppButton.addEventListener("click", async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const result = await deferredInstallPrompt.userChoice;
+      console.log("PWA installasjonsresultat:", result.outcome);
+      deferredInstallPrompt = null;
+      installAppButton.hidden = true;
+    });
   }
-});
 
-  /* --- Varsling ved nye kritiske printerfeil --- */
+  window.addEventListener("appinstalled", () => {
+    console.log("Webappen er nå installert lokalt.");
+    deferredInstallPrompt = null;
+    if (installAppButton) installAppButton.hidden = true;
+  });
+
+  /* ==========================================================================
+     2. Lyd & Desktop-varsling ved nye kritiske feil
+     ========================================================================== */
   const notificationToggle = document.getElementById("notificationToggle");
   const notificationIcon = document.getElementById("notificationIcon");
   const notificationText = document.getElementById("notificationText");
@@ -73,125 +86,215 @@ window.addEventListener("appinstalled", () => {
 
   let knownCriticalErrors = new Set();
   let notificationBaselineReady = false;
-  let notificationAudioContext = null;
+  let audioContext = null;
 
   try {
-    const storedCriticalErrors = localStorage.getItem(KNOWN_CRITICAL_ERRORS_KEY);
-    if (storedCriticalErrors !== null) {
-      knownCriticalErrors = new Set(JSON.parse(storedCriticalErrors));
+    const stored = localStorage.getItem(KNOWN_CRITICAL_ERRORS_KEY);
+    if (stored !== null) {
+      knownCriticalErrors = new Set(JSON.parse(stored));
       notificationBaselineReady = true;
     }
-  } catch (error) {
-    console.warn("Kunne ikke lese tidligere printerfeil fra localStorage:", error);
+  } catch (err) {
+    console.warn("Kunne ikke lese lagrede feil fra localStorage:", err);
   }
 
-  searchContainer.classList.add("hidden");
+  const getAudioContext = () => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!audioContext) {
+      audioContext = new AudioContextClass();
+    }
+    return audioContext;
+  };
 
-  const criticalErrors = new Set([
-    "Error fetching errors",
-    "Papirstopp",
-    "Tom:",
-    "Fyll på",
-    "Deksel åpent",
-    "Empty:",
-    "Cover open",
-    "Replace",
-    "Trenger flere stifter",
-    "40440",
-    "40132",
-    "40133",
-    "40134",
-    "40135",
-    "40010",
-    "40011",
-    "40012",
-    "40013",
-    "40014",
-    "40015",
-    "40300",
-    "40341",
-    "40490",
-    "40800",
-    "40540",
-    "40100",
-    "40241",
-    "340101"
-  ]);
+  const playNotificationSound = () => {
+    const ctx = getAudioContext();
+    if (!ctx) return;
 
-  const warningErrors = new Set([
-    "Nesten",
-    "Forbred",
-    "Finner ikke:",
-    "Almost out",
-    "Preparing",
-    "Not found:",
-    "Lavt niv",
-    "10032",
-    "10072",
-    "10073",
-    "10074",
-    "10075",
-    "30609",
-    "30427",
-    "30722",
-    "30743",
-    "42000",
-    "42001",
-    "42009"
-  ]);
+    const playTones = () => {
+      const now = ctx.currentTime;
+      // Harmonisk tre-toners varsling (E5, A5, C#6)
+      [659.25, 880.0, 1108.73].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const start = now + idx * 0.14;
+        const end = start + 0.18;
 
-  // Backend og frontend deler samme klassifisering via error_rules.json.
-  // I vanlig printervisning vises toner og papir fortsatt som oransje,
-  // men i historikken er de egne kategorier og teller ikke som tekniske feil.
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.2, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(end);
+      });
+    };
+
+    if (ctx.state === "suspended") {
+      ctx.resume().then(playTones).catch(() => {});
+    } else {
+      playTones();
+    }
+  };
+
+  // Hurtigtast 'T' for å teste varsellyd
+  document.addEventListener("keydown", (e) => {
+    if (e.repeat) return;
+    const tag = document.activeElement?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+
+    if (e.key.toLowerCase() === "t") {
+      playNotificationSound();
+      console.log("Test av varsellyd trigget.");
+    }
+    if (e.key === "/" && searchBox) {
+      e.preventDefault();
+      searchBox.focus();
+    }
+  });
+
+  const updateNotificationUi = () => {
+    if (!notificationToggle) return;
+
+    if (!browserSupportsNotifications) {
+      notificationToggle.disabled = true;
+      notificationToggle.title = "Denne nettleseren støtter ikke skrivebordsvarsler.";
+      if (notificationIcon) notificationIcon.textContent = "🚫";
+      if (notificationText) notificationText.textContent = "Støttes ikke";
+      return;
+    }
+
+    const denied = Notification.permission === "denied";
+    const active = notificationsEnabled && Notification.permission === "granted";
+
+    notificationToggle.disabled = false;
+    notificationToggle.classList.toggle("enabled", active);
+    notificationToggle.classList.toggle("permission-denied", denied);
+    notificationToggle.setAttribute("aria-pressed", String(active));
+
+    if (active) {
+      notificationToggle.title = "Varsling er aktiv. Klikk for å slå av.";
+      if (notificationIcon) notificationIcon.textContent = "🔔";
+      if (notificationText) notificationText.textContent = "Varsling på";
+    } else if (denied) {
+      notificationToggle.title = "Varsling er blokkert i nettleserinnstillingene.";
+      if (notificationIcon) notificationIcon.textContent = "🚫";
+      if (notificationText) notificationText.textContent = "Blokkert";
+    } else {
+      notificationToggle.title = "Klikk for å aktivere varsling ved kritiske printerfeil.";
+      if (notificationIcon) notificationIcon.textContent = "🔕";
+      if (notificationText) notificationText.textContent = "Varsling av";
+    }
+  };
+
+  const toggleNotifications = async () => {
+    if (!browserSupportsNotifications) {
+      alert("Nettleseren støtter ikke desktop-varsler.");
+      return;
+    }
+
+    if (notificationsEnabled) {
+      notificationsEnabled = false;
+      localStorage.setItem(NOTIFICATION_ENABLED_KEY, "false");
+      updateNotificationUi();
+      return;
+    }
+
+    let perm = Notification.permission;
+    if (perm !== "granted") {
+      perm = await Notification.requestPermission();
+    }
+
+    if (perm === "granted") {
+      notificationsEnabled = true;
+      localStorage.setItem(NOTIFICATION_ENABLED_KEY, "true");
+      const ctx = getAudioContext();
+      if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+      playNotificationSound();
+    } else {
+      notificationsEnabled = false;
+      localStorage.setItem(NOTIFICATION_ENABLED_KEY, "false");
+      alert("Varsling ble ikke godkjent. Tillat varsler for nettstedet i nettleseren.");
+    }
+    updateNotificationUi();
+  };
+
+  notificationToggle?.addEventListener("click", toggleNotifications);
+  updateNotificationUi();
+
+  // Lås opp lyd ved første brukerklikk
+  const unlockAudio = () => {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+    document.removeEventListener("pointerdown", unlockAudio);
+    document.removeEventListener("keydown", unlockAudio);
+  };
+  document.addEventListener("pointerdown", unlockAudio);
+  document.addEventListener("keydown", unlockAudio);
+
+  /* ==========================================================================
+     3. Feilklassifisering og Oversettelser (error_rules.json)
+     ========================================================================== */
   let sharedErrorRules = null;
 
   const loadSharedErrorRules = async () => {
     try {
-      const response = await fetch("error_rules.json", { cache: "no-store" });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      sharedErrorRules = await response.json();
-    } catch (error) {
+      const res = await fetch("error_rules.json", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      sharedErrorRules = await res.json();
+    } catch (err) {
+      console.warn("Bruker innebygde feilregler:", err);
       sharedErrorRules = null;
-      console.warn("Kunne ikke laste error_rules.json; bruker innebygde fallback-regler:", error);
     }
   };
 
-  const parseFrontendError = (error) => {
-    const raw = String(error || "");
-    const match = raw.match(/\{([^{}]+)\}\s*$/);
+  const parseErrorString = (raw) => {
+    const str = String(raw || "").trim();
+    const match = str.match(/\{([^{}]+)\}\s*$/);
     return {
+      raw: str,
       code: match ? match[1].trim() : "",
-      message: raw.replace(/\s*\{[^{}]+\}\s*$/, "").trim()
+      message: str.replace(/\s*\{[^{}]+\}\s*$/, "").trim(),
     };
   };
 
-  const frontendRuleMatches = (group, parsed) => {
+  const groupMatches = (group, parsed) => {
     if (!group) return false;
-    const message = parsed.message.toLowerCase();
+    const msg = parsed.message.toLowerCase();
     const code = parsed.code;
 
     if (code && (group.codes || []).map(String).includes(code)) return true;
-    if ((group.exact || []).some(value => String(value).toLowerCase() === message)) return true;
-    return (group.contains || []).some(value => message.includes(String(value).toLowerCase()));
+    if ((group.exact || []).some((val) => String(val).toLowerCase() === msg)) return true;
+    return (group.contains || []).some((val) => msg.includes(String(val).toLowerCase()));
   };
 
-  const classifyFrontendError = (error) => {
+  const classifyError = (rawError) => {
+    const parsed = parseErrorString(rawError);
+
     if (sharedErrorRules) {
-      const parsed = parseFrontendError(error);
-      if (frontendRuleMatches(sharedErrorRules.ignore, parsed)) return null;
-      if (frontendRuleMatches(sharedErrorRules.toner, parsed)) return "warning";
-      if (frontendRuleMatches(sharedErrorRules.paper, parsed)) return "warning";
-      if (frontendRuleMatches(sharedErrorRules.critical, parsed)) return "critical";
-      if (frontendRuleMatches(sharedErrorRules.warning, parsed)) return "warning";
+      if (groupMatches(sharedErrorRules.ignore, parsed)) return null;
+      if (groupMatches(sharedErrorRules.toner, parsed)) return "warning";
+      if (groupMatches(sharedErrorRules.paper, parsed)) return "warning";
+      if (groupMatches(sharedErrorRules.critical, parsed)) return "critical";
+      if (groupMatches(sharedErrorRules.warning, parsed)) return "warning";
       return "normal";
     }
 
-    if (errorContainsKeyword(error, criticalErrors)) return "critical";
-    if (errorContainsKeyword(error, warningErrors)) return "warning";
+    // Fallback ved manglende error_rules.json
+    const lower = parsed.message.toLowerCase();
+    const criticalKeywords = ["papirstopp", "deksel", "cover", "empty:", "tom:", "fyll på", "replace", "stifter", "error fetching"];
+    const warningKeywords = ["nesten", "forbred", "preparing", "finner ikke", "not found", "lavt", "toner", "papir"];
+
+    if (criticalKeywords.some((k) => lower.includes(k))) return "critical";
+    if (warningKeywords.some((k) => lower.includes(k))) return "warning";
     return "normal";
   };
 
-  const errorTranslations = new Map([
+  const translations = [
     ["Ring service:", "Ring service: "],
     ["Tomt for papir: magasin", "Tomt for papir i magasin"],
     ["Finner ikke: magasin", "Finner ikke magasin"],
@@ -201,640 +304,584 @@ window.addEventListener("appinstalled", () => {
     ["Not found:", "Finner ikke:"],
     ["Preparing", "Forbereder"],
     ["Out of paper", "Tom for papir"],
-    ["brukt toner", "waste toner"],
+    ["brukt toner", "Avfallsbeholder for toner"],
     ["Lavt niv: stifter", "Lavt stifte-nivå"],
-    ["skriverkassett", "tonerkasett"],
-    ["Error fetching errors", "Frakoblet?"]
-  ]);
+    ["skriverkassett", "tonerkassett"],
+    ["Error fetching errors", "Frakoblet / Nettverksfeil"],
+  ];
 
-  const translateError = (error) => {
-    let translatedError = error;
-    for (const [from, to] of errorTranslations) {
-      translatedError = translatedError.split(from).join(to);
+  const translateErrorText = (msg) => {
+    let out = msg;
+    for (const [from, to] of translations) {
+      out = out.split(from).join(to);
     }
-    return translatedError;
+    return out;
   };
 
-  const errorContainsKeyword = (error, keywords) =>
-    Array.from(keywords).some(keyword =>
-      error.toLowerCase().includes(keyword.toLowerCase())
-    );
-
-  const getCriticalErrors = (printer) =>
-    printer.Errors.filter(error => classifyFrontendError(error) === "critical");
-
-  const updateNotificationButton = () => {
-    if (!notificationToggle) return;
-
-    if (!browserSupportsNotifications) {
-      notificationToggle.disabled = true;
-      notificationToggle.title = "Denne nettleseren støtter ikke skrivebordsvarsler";
-      notificationIcon.textContent = "🚫";
-      notificationText.textContent = "Varsling støttes ikke";
-      return;
-    }
-
-    const permissionDenied = Notification.permission === "denied";
-    const isEnabled = notificationsEnabled && Notification.permission === "granted";
-
-    notificationToggle.disabled = false;
-    notificationToggle.classList.toggle("enabled", isEnabled);
-    notificationToggle.classList.toggle("permission-denied", permissionDenied);
-    notificationToggle.setAttribute("aria-pressed", String(isEnabled));
-    notificationToggle.title = permissionDenied
-      ? "Varsling er blokkert i nettleseren"
-      : isEnabled
-        ? "Slå av varsling ved kritiske printerfeil"
-        : "Slå på varsling ved kritiske printerfeil";
-    notificationIcon.textContent = isEnabled ? "🔔" : permissionDenied ? "🚫" : "🔕";
-    notificationText.textContent = isEnabled ? "Varsling på" : "Varsling av";
-  };
-
-  const getNotificationAudioContext = () => {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return null;
-
-    if (!notificationAudioContext) {
-      notificationAudioContext = new AudioContextClass();
-    }
-
-    return notificationAudioContext;
-  };
-
-  const playNotificationSound = () => {
-    const audioContext = getNotificationAudioContext();
-    if (!audioContext) return;
-
-    const playTone = () => {
-      const startTime = audioContext.currentTime;
-
-      [660, 880, 440].forEach((frequency, index) => {
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        const toneStart = startTime + index * 0.16;
-        const toneEnd = toneStart + 0.13;
-
-        oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(frequency, toneStart);
-        gain.gain.setValueAtTime(0.0001, toneStart);
-        gain.gain.exponentialRampToValueAtTime(0.25, toneStart + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
-
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-        oscillator.start(toneStart);
-        oscillator.stop(toneEnd);
-      });
-    };
-
-    if (audioContext.state === "suspended") {
-      audioContext.resume().then(playTone).catch(error => {
-        console.warn("Varslingslyden ble blokkert av nettleseren:", error);
-      });
-    } else {
-      playTone();
-    }
-  };
-
-  /* test med T-tasten  */
-  document.addEventListener("keydown", (event) => {
-    if (event.repeat) return;
-
-    // ignorer url osv
-    const activeElement = document.activeElement;
-    const isTyping =
-      activeElement &&
-      (
-        activeElement.tagName === "INPUT" ||
-        activeElement.tagName === "TEXTAREA" ||
-        activeElement.isContentEditable
-      );
-
-    if (isTyping) return;
-
-    if (event.key.toLowerCase() === "t") {
-      playNotificationSound();
-      console.log("Test av varslingslyd");
-    }
-  });
-
-  const showCriticalNotification = (printer, errors) => {
-    if (!notificationsEnabled || Notification.permission !== "granted") return;
-
-    const readableErrors = errors.map(error => {
-      const baseError = error.replace(/\s*\{[^\}]+\}\s*$/, "");
-      return translateError(baseError);
-    });
-
-    const notification = new Notification(
-      `Kritisk printerfeil: ${printer.Name}`,
-      {
-        body: `${printer.Model}: ${readableErrors.join(", ")}`,
-        icon: "images/printer-icon1.png",
-        badge: "images/favicon-96x96.png",
-        tag: `printer-critical-${printer.IP}`,
-        renotify: true,
-        requireInteraction: true
-      }
-    );
-
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-
-    playNotificationSound();
-  };
-
-  const processCriticalNotifications = (printerData) => {
-    const currentCriticalErrors = new Set();
+  /* ==========================================================================
+     4. Håndtering av Kritiske Push-Varsler
+     ========================================================================== */
+  const processCriticalNotifications = (printers) => {
+    const currentErrors = new Set();
     const newErrorsByPrinter = new Map();
 
-    printerData.forEach(printer => {
-      getCriticalErrors(printer).forEach(error => {
-        const normalizedError = error.trim().toLowerCase();
-        const errorKey = `${printer.IP}|${normalizedError}`;
-        currentCriticalErrors.add(errorKey);
+    printers.forEach((p) => {
+      const critErrors = (p.Errors || []).filter((e) => classifyError(e) === "critical");
+      critErrors.forEach((rawErr) => {
+        const key = `${p.IP}|${rawErr.trim().toLowerCase()}`;
+        currentErrors.add(key);
 
-        if (notificationBaselineReady && !knownCriticalErrors.has(errorKey)) {
-          if (!newErrorsByPrinter.has(printer.IP)) {
-            newErrorsByPrinter.set(printer.IP, { printer, errors: [] });
+        if (notificationBaselineReady && !knownCriticalErrors.has(key)) {
+          if (!newErrorsByPrinter.has(p.IP)) {
+            newErrorsByPrinter.set(p.IP, { printer: p, errors: [] });
           }
-          newErrorsByPrinter.get(printer.IP).errors.push(error);
+          newErrorsByPrinter.get(p.IP).errors.push(rawErr);
         }
       });
     });
 
-    if (
-      notificationBaselineReady &&
-      notificationsEnabled &&
-      Notification.permission === "granted"
-    ) {
+    if (notificationBaselineReady && notificationsEnabled && Notification.permission === "granted") {
       newErrorsByPrinter.forEach(({ printer, errors }) => {
-        showCriticalNotification(printer, errors);
+        const readable = errors.map((e) => {
+          const parsed = parseErrorString(e);
+          return translateErrorText(parsed.message);
+        });
+
+        const n = new Notification(`Kritisk feil: ${printer.Name}`, {
+          body: `${printer.Model}: ${readable.join(", ")}`,
+          icon: "images/printer-icon1.png",
+          badge: "images/favicon-96x96.png",
+          tag: `ricoh-critical-${printer.IP}`,
+          renotify: true,
+          requireInteraction: true,
+        });
+
+        n.onclick = () => {
+          window.focus();
+          n.close();
+        };
+
+        playNotificationSound();
       });
     }
 
-    knownCriticalErrors = currentCriticalErrors;
+    knownCriticalErrors = currentErrors;
     notificationBaselineReady = true;
 
     try {
-      localStorage.setItem(
-        KNOWN_CRITICAL_ERRORS_KEY,
-        JSON.stringify(Array.from(knownCriticalErrors))
-      );
-    } catch (error) {
-      console.warn("Kunne ikke lagre aktive printerfeil i localStorage:", error);
+      localStorage.setItem(KNOWN_CRITICAL_ERRORS_KEY, JSON.stringify(Array.from(knownCriticalErrors)));
+    } catch (e) {
+      // Ignorer kvotebegrensning
     }
   };
 
-  const toggleNotifications = async () => {
-    if (!browserSupportsNotifications) {
-      alert("Denne nettleseren støtter ikke skrivebordsvarsler.");
-      return;
-    }
+  /* ==========================================================================
+     5. Kort-bygging og Rendring
+     ========================================================================== */
+  const escapeHtml = (str) =>
+    String(str ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
 
-    if (notificationsEnabled) {
-      notificationsEnabled = false;
-      localStorage.setItem(NOTIFICATION_ENABLED_KEY, "false");
-      updateNotificationButton();
-      return;
-    }
-
-    let permission = Notification.permission;
-    if (permission !== "granted") {
-      permission = await Notification.requestPermission();
-    }
-
-    if (permission !== "granted") {
-      notificationsEnabled = false;
-      localStorage.setItem(NOTIFICATION_ENABLED_KEY, "false");
-      updateNotificationButton();
-      alert("Varsling ble ikke slått på. Tillat varsler for nettsiden i nettleserens nettstedinnstillinger.");
-      return;
-    }
-
-    notificationsEnabled = true;
-    localStorage.setItem(NOTIFICATION_ENABLED_KEY, "true");
-
-    // Oppretter lydkonteksten mens klikket fortsatt regnes som brukerhandling.
-    const audioContext = getNotificationAudioContext();
-    if (audioContext && audioContext.state === "suspended") {
-      audioContext.resume().catch(() => {});
-    }
-
-    updateNotificationButton();
+  const formatDate = (raw) => {
+    if (!raw) return "";
+    const parts = raw.split(", ");
+    if (parts.length < 2) return raw;
+    const dateParts = parts[0].split(" ");
+    if (dateParts.length < 3) return raw;
+    return `${dateParts[0]}.${dateParts[1]}.${dateParts[2]}, ${parts[1]}`;
   };
 
-  const initializeNotificationControls = () => {
-    if (browserSupportsNotifications && Notification.permission !== "granted") {
-      notificationsEnabled = false;
-      localStorage.setItem(NOTIFICATION_ENABLED_KEY, "false");
+  const createPrinterCard = (p, statusClass) => {
+    const card = document.createElement("article");
+    card.className = `printer-card ${statusClass ? `status-${statusClass}` : ""}`;
+    card.id = `printer-${p.IP.replaceAll(".", "-")}`;
+    card.dataset.ip = p.IP;
+    card.dataset.name = p.Name;
+    card.dataset.model = p.Model;
+
+    if (expandedPrinters.has(p.IP)) {
+      card.classList.add("expanded");
     }
 
-    updateNotificationButton();
-    notificationToggle?.addEventListener("click", toggleNotifications);
+    // Statusindikator
+    let statusPillHtml = `<span class="card-status-indicator ok">● Operativ</span>`;
+    if (statusClass === "critical") {
+      statusPillHtml = `<span class="card-status-indicator critical">⚠️ Kritisk</span>`;
+    } else if (statusClass === "warning") {
+      statusPillHtml = `<span class="card-status-indicator warning">⚡ Advarsel</span>`;
+    }
 
-    // Etter en ny innlasting kan nettleseren kreve én brukerhandling før egen lyd tillates.
-    const unlockNotificationAudio = () => {
-      if (notificationsEnabled) {
-        const audioContext = getNotificationAudioContext();
-        if (audioContext && audioContext.state === "suspended") {
-          audioContext.resume().catch(() => {});
-        }
-      }
-      document.removeEventListener("pointerdown", unlockNotificationAudio);
-      document.removeEventListener("keydown", unlockNotificationAudio);
+    // CMYK Tonernivåer
+    const ink = Array.isArray(p["Ink Levels"]) ? p["Ink Levels"] : [];
+    const blackPct = parseFloat(ink[0]) || 0;
+    const cyanPct = parseFloat(ink[2]) || 0;
+    const magentaPct = parseFloat(ink[3]) || 0;
+    const yellowPct = parseFloat(ink[4]) || 0;
+
+    const buildTonerItem = (name, label, pct, colorClass) => {
+      const isLow = pct > 0 && pct <= 15;
+      return `
+        <div class="toner-bar-item ${isLow ? "low-level" : ""}">
+          <div class="toner-bar-header">
+            <span class="toner-name ${colorClass}">${label}</span>
+            <span class="toner-val">${pct}%</span>
+          </div>
+          <div class="toner-progress-track">
+            <div class="toner-progress-fill ${colorClass}" style="width: ${Math.min(100, Math.max(0, pct))}%"></div>
+          </div>
+        </div>
+      `;
     };
 
-    document.addEventListener("pointerdown", unlockNotificationAudio);
-    document.addEventListener("keydown", unlockNotificationAudio);
-  };
+    const tonersHtml = `
+      <div class="toner-bars-grid">
+        ${buildTonerItem("black", "Sort", blackPct, "black")}
+        ${buildTonerItem("cyan", "Cyan", cyanPct, "cyan")}
+        ${buildTonerItem("magenta", "Magenta", magentaPct, "magenta")}
+        ${buildTonerItem("yellow", "Gul", yellowPct, "yellow")}
+      </div>
+    `;
 
-  const fetchPrinterData = () => {
-    const currentSearchTerm = searchBox.value.toLowerCase();
-    
-    fetch("printer_data.json", { headers: { 'Content-Type': 'application/json; charset=UTF-8' } })
-      .then((response) => response.json())
-      .then((printerData) => {
-        processCriticalNotifications(printerData);
+    // Skuffer / Magasiner
+    const rawTrays = Array.isArray(p["Tray Information"]) ? p["Tray Information"] : [];
+    const trays = rawTrays.slice(0, -1); // Fjern bypass/total
+    const traysHtml = trays
+      .map((amount, idx) => {
+        let chipClass = "";
+        let text = `${amount} ark`;
 
-        const scrollPosition = window.scrollY;
-        const expandedStates = {};
-        Array.from(container.children).forEach(printer => {
-          const printerName = printer.querySelector('h2').textContent;
-          expandedStates[printerName] = printer.classList.contains('expanded');
-        });
-
-        container.innerHTML = "";
-
-        const printersWithCriticalError = [];
-        const printersWithWarning = [];
-        const printersWithNoError = [];
-
-        printerData.forEach((printer) => {
-          const hasWarning = printer.Errors.some(error => classifyFrontendError(error) === "warning");
-          const hasCriticalError = printer.Errors.some(error => classifyFrontendError(error) === "critical");
-
-          if (!hasCriticalError && !hasWarning && !showAllPrinters) {
-            return;
-          }
-
-          const printerDiv = document.createElement("div");
-          printerDiv.className = "printer";
-
-          if (expandedPrinters.has(printer.IP)) {
-            printerDiv.classList.add("expanded");
-          }
-
-          if (hasCriticalError) {
-            printerDiv.classList.add("pulsate-error");
-            printersWithCriticalError.push(printerDiv);
-          } else if (hasWarning) {
-            printerDiv.classList.add("pulsate-warning");
-            printersWithWarning.push(printerDiv);
-          } else {
-            printersWithNoError.push(printerDiv);
-          }
-
-          const inkLevelsHtml = `
-            <div class="ink-level-bar-container">
-              <span class="ink-level-percentage">Sort: ${printer["Ink Levels"][0]}</span>
-              <div class="ink-level-bar ink-black" style="--ink-percentage: ${parseFloat(printer["Ink Levels"][0])}"></div>
-            </div>
-            <div class="ink-level-bar-container">
-              <span class="ink-level-percentage">Cyan: ${printer["Ink Levels"][2]}</span>
-              <div class="ink-level-bar ink-cyan" style="--ink-percentage: ${parseFloat(printer["Ink Levels"][2])}"></div>
-            </div>
-            <div class="ink-level-bar-container">
-              <span class="ink-level-percentage">Magenta: ${printer["Ink Levels"][3]}</span>
-              <div class="ink-level-bar ink-magenta" style="--ink-percentage: ${parseFloat(printer["Ink Levels"][3])}"></div>
-            </div>
-            <div class="ink-level-bar-container">
-              <span class="ink-level-percentage">Gul: ${printer["Ink Levels"][4]}</span>
-              <div class="ink-level-bar ink-yellow" style="--ink-percentage: ${parseFloat(printer["Ink Levels"][4])}"></div>
-            </div>
-          `;
-
-          const trayCountersHtml = printer["Tray Information"].slice(0, -1).map((count, index) => {
-            let countClass = "";
-            let answer = count;
-            let showArk = true;
-
-            if (count == -3) {
-              answer = "Har";
-            } else if (count == -2) {
-              answer = "Finner ikke magasin";
-              countClass = "almostempty";
-              showArk = false;
-            } else if (answer == 0) {
-              countClass = "empty";
-            } else if (answer < 56) {
-              countClass = "almostempty";
-            }
-
-            return `
-              <div class="tray-counter ${countClass}">
-                <strong>Skuff ${index + 1}:</strong> ${answer} ${showArk ? "ark" : ""}
-              </div>
-            `;
-          }).join("");
-
-          let imagePath = `images/${printer.Model}.png`;
-          if (printer.Model === "Error fetching model") {
-            imagePath = `images/missing.png`;
-          }
-
-          printerDiv.innerHTML = `
-            <div class="printer-icon" style="background-image: url('${imagePath}');"></div>
-            <h2>${printer.Name} (${printer.Model})</h2>
-            <div class="details">
-              <div class="printer-info">
-                <div class="printer-ip-sn">
-                  <div><strong>IP:</strong> <a href="http://${printer.IP}" target="_blank" class="printer-ip">${printer.IP}</a></div>
-                  <div><strong>S/N:</strong> <span class="printer-serial" 
-                    onmouseover="if(!this.dataset.wascopied) this.classList.add('show-tooltip')" 
-                    onmouseout="this.classList.remove('show-tooltip')" 
-                    onclick="this.classList.remove('show-tooltip'); this.dataset.wascopied = 'true'; this.classList.add('copied'); setTimeout(() => { this.classList.remove('copied'); delete this.dataset.wascopied; }, 1000); navigator.clipboard.writeText(this.textContent)">${printer.Serial || "N/A"}</span></div>
-                </div>
-                <div class="toner-section"><strong>Tonernivå:</strong>${inkLevelsHtml}</div>
-                <div class="tray-section"><strong>Papirmengde:</strong>${trayCountersHtml}</div>
-                <div class="updated"><strong>Sist oppdatert:</strong> ${formatDate(printer.Time)}</div>
-              </div>
-            </div>
-            <ul class="errors-list">
-              ${(() => {
-                const errorGroups = {
-                  critical: [],
-                  warning: [],
-                  normal: []
-                };
-
-                printer.Errors.forEach(error => {
-                  const baseError = error.replace(/\s*\{[^\}]+\}\s*$/, '');
-                  const errorCode = (error.match(/\{([^\}]+)\}/) || [])[1] || '';
-                  const errorText = `${translateError(baseError)}${errorCode ? ` {${errorCode}}` : ''}`;
-
-                  const classification = classifyFrontendError(error);
-                  if (classification === "critical") {
-                    errorGroups.critical.push(errorText);
-                  } else if (classification === "warning") {
-                    errorGroups.warning.push(errorText);
-                  } else {
-                    errorGroups.normal.push(errorText);
-                  }
-                });
-
-                return [
-                  ...errorGroups.critical.map(error => `<li class="critical-error">${error}</li>`),
-                  ...errorGroups.warning.map(error => `<li class="warning-error">${error}</li>`),
-                  ...errorGroups.normal.map(error => `<li>${error}</li>`)
-                ].join('');
-              })()}
-            </ul>
-          `;
-
-          printerDiv.addEventListener("click", () => {
-            printerDiv.classList.toggle("expanded");
-            if (printerDiv.classList.contains("expanded")) {
-              expandedPrinters.add(printer.IP);
-            } else {
-              expandedPrinters.delete(printer.IP);
-            }
-          });
-
-          const wasExpanded = expandedStates[`${printer.Name} (${printer.Model})`];
-          if (wasExpanded) {
-            printerDiv.classList.add("expanded");
-            expandedPrinters.add(printer.IP);
-          }
-
-          if (currentSearchTerm) {
-            const searchableContent = printerDiv.textContent.toLowerCase();
-            if (!searchableContent.includes(currentSearchTerm)) {
-              printerDiv.classList.add("hidden");
-            }
-          }
-
-          container.appendChild(printerDiv);
-        });
-
-        window.scrollTo(0, scrollPosition);
-
-        if (printersWithCriticalError.length === 0 && printersWithWarning.length === 0 && !showAllPrinters) {
-          noErrorsMessage.style.display = "block";
-          document.getElementById("printerSummary").style.display = "none";
-        } else {
-          noErrorsMessage.style.display = "none";
+        if (amount == "-3") {
+          text = "Har papir";
+        } else if (amount == "-2") {
+          text = "Mangler";
+          chipClass = "almostempty";
+        } else if (amount == "0") {
+          text = "Tom";
+          chipClass = "empty";
+        } else if (parseInt(amount, 10) < 56) {
+          chipClass = "almostempty";
         }
 
-        if (showAllPrinters) {
-          printersWithCriticalError.forEach(printer => container.appendChild(printer));
-          printersWithWarning.forEach(printer => container.appendChild(printer));
-          printersWithNoError.forEach(printer => container.appendChild(printer));
-        }
+        return `
+        <div class="tray-chip ${chipClass}">
+          <span class="tray-label">Skuff ${idx + 1}</span>
+          <span class="tray-amount">${text}</span>
+        </div>
+      `;
+      })
+      .join("");
 
-        if (showAllPrinters) {
-          const savedSearchTerm = localStorage.getItem("searchTerm");
-          if (savedSearchTerm) {
-            searchBox.value = savedSearchTerm;
-            clearButton.classList.remove("hidden");
-            filterPrinters(savedSearchTerm);
-          }
-        }
+    // Feilmeldinger
+    const errorsList = Array.isArray(p.Errors) ? p.Errors : [];
+    const classifiedErrors = errorsList
+      .map((err) => {
+        const cls = classifyError(err);
+        if (cls === null) return null;
+        const parsed = parseErrorString(err);
+        return {
+          raw: err,
+          classification: cls,
+          message: translateErrorText(parsed.message),
+          code: parsed.code,
+        };
+      })
+      .filter(Boolean);
 
-        if (!showAllPrinters && !isMobile()) {
-          generatePrinterSummary(printerData);
-        } else {
-          document.getElementById("printerSummary").style.display = "none";
-        }
-      });
-  };
-
-  const generatePrinterSummary = (printerData) => {
-    summaryContainer.innerHTML = "";
-
-    const criticalPrinters = [];
-    const warningPrinters = [];
-
-    printerData.forEach(printer => {
-      const uniqueErrors = printer.Errors.filter((error, index, self) => {
-        const normalizedError = error.toLowerCase()
-          .replace(/\s*\{[^\}]+\}\s*$/, '')
-          .replace(/\d+$/, '');
-        return self.findIndex(e => 
-          e.toLowerCase()
-            .replace(/\s*\{[^\}]+\}\s*$/, '')
-            .replace(/\d+$/, '') === normalizedError
-        ) === index;
-      });
-
-      const hasCriticalError = printer.Errors.some(error => classifyFrontendError(error) === "critical");
-      const hasWarningError = printer.Errors.some(error => classifyFrontendError(error) === "warning") && !hasCriticalError;
-
-      if (hasCriticalError) {
-        criticalPrinters.push({...printer, SummaryErrors: uniqueErrors});
-      } else if (hasWarningError) {
-        warningPrinters.push({...printer, SummaryErrors: uniqueErrors});
-      }
+    // Prioritering: critical -> warning -> normal
+    classifiedErrors.sort((a, b) => {
+      const order = { critical: 1, warning: 2, normal: 3 };
+      return order[a.classification] - order[b.classification];
     });
 
-    if (criticalPrinters.length > 0 || warningPrinters.length > 0) {
-      summaryContainer.innerHTML = "<h3>Aktive feilmeldinger:</h3>";
-      
-      if (criticalPrinters.length > 0) {
-        const criticalGroup = document.createElement('div');
-        criticalGroup.className = 'error-group critical';
-        criticalGroup.innerHTML = `
-          <ul>${criticalPrinters.map(printer => {
-            const errors = printer.SummaryErrors.filter(error =>
-              classifyFrontendError(error) === "critical"
-            ).map(error => translateError(error.replace(/\s*\{[^\}]+\}\s*$/, '')));
-            return `<li><strong>${printer.Name} (${printer.Model}):</strong> <span class="critical-error">${errors.join(", ")}</span></li>`;
-          }).join("")}</ul>
-        `;
-        summaryContainer.appendChild(criticalGroup);
-      }
+    const errorsHtml =
+      classifiedErrors.length > 0
+        ? `
+        <div class="card-errors">
+          <ul class="card-errors-list">
+            ${classifiedErrors
+              .map(
+                (e) => `
+              <li class="error-item ${e.classification}">
+                <span>${escapeHtml(e.message)}</span>
+                ${e.code ? `<span class="error-code-chip">{${escapeHtml(e.code)}}</span>` : ""}
+              </li>
+            `
+              )
+              .join("")}
+          </ul>
+        </div>
+      `
+        : "";
 
-      if (warningPrinters.length > 0) {
-        const warningGroup = document.createElement('div');
-        warningGroup.className = 'error-group warning';
-        warningGroup.innerHTML = `
-          <ul>${warningPrinters.map(printer => {
-            const errors = printer.SummaryErrors.filter(error =>
-              classifyFrontendError(error) === "warning"
-            ).map(error => translateError(error.replace(/\s*\{[^\}]+\}\s*$/, '')));
-            return `<li><strong>${printer.Name} (${printer.Model}):</strong> <span class="warning-error">${errors.join(", ")}</span></li>`;
-          }).join("")}</ul>
-        `;
-        summaryContainer.appendChild(warningGroup);
-      }
-
-      summaryContainer.style.display = "block";
-    } else {
-      summaryContainer.style.display = "none";
+    // Bildebane
+    let imgName = p.Model;
+    if (!imgName || imgName === "Error fetching model") {
+      imgName = "missing";
     }
-  };
+    const imgSrc = `images/${encodeURIComponent(imgName)}.png`;
 
-  const setupEventListeners = () => {
-    document.getElementById("toggleButton").addEventListener("click", () => {
-      const isSummaryView = document.body.classList.contains('summary-view');
-      showAllPrinters = !showAllPrinters;
-      
-      if (isSummaryView) {
-        document.body.classList.toggle('show-all-printers', showAllPrinters);
-        document.getElementById("toggleButton").textContent = showAllPrinters ? "Vis oppsummering" : "Vis alle kopimaskiner";
+    card.innerHTML = `
+      <header class="card-header">
+        <div class="card-title-group">
+          <h2 class="card-printer-name" title="${escapeHtml(p.Name)}">${escapeHtml(p.Name)}</h2>
+          <span class="card-model-badge">${escapeHtml(p.Model || "Ricoh")}</span>
+        </div>
+        ${statusPillHtml}
+      </header>
+
+      <div class="card-body">
+        <div class="printer-hero">
+          <img
+            src="${imgSrc}"
+            alt="${escapeHtml(p.Model)}"
+            class="printer-thumbnail"
+            loading="lazy"
+            onerror="this.src='images/missing.png'"
+          >
+          <div class="printer-meta-list">
+            <div class="meta-row">
+              <span class="meta-label">IP-adresse:</span>
+              <a href="http://${escapeHtml(p.IP)}" target="_blank" rel="noopener noreferrer" class="printer-ip-link" title="Åpne webgrensesnitt">
+                ${escapeHtml(p.IP)} ↗
+              </a>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Serienummer:</span>
+              <button
+                type="button"
+                class="serial-copy-btn"
+                title="Klikk for å kopiere serienummer"
+                data-serial="${escapeHtml(p.Serial || '')}"
+              >
+                <span>${escapeHtml(p.Serial || "N/A")}</span>
+                <span class="copy-icon" aria-hidden="true">📋</span>
+              </button>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">EID / ID:</span>
+              <span class="meta-value">${escapeHtml(p.EID || "–")}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="toner-section">
+          <span class="toner-section-title">Tonernivåer (CMYK)</span>
+          ${tonersHtml}
+        </div>
+
+        <div class="trays-section">
+          <div class="trays-grid">
+            ${traysHtml}
+          </div>
+        </div>
+
+        ${errorsHtml}
+      </div>
+
+      <footer class="card-footer">
+        <span>Sist oppdatert: ${formatDate(p.Time)}</span>
+        <span style="cursor: pointer;" title="Klikk kortet for full bredde">⤢ Vis detaljer</span>
+      </footer>
+    `;
+
+    // Klikk på serienummer for å kopiere
+    const serialBtn = card.querySelector(".serial-copy-btn");
+    serialBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const serial = serialBtn.dataset.serial;
+      if (!serial) return;
+      navigator.clipboard.writeText(serial).then(() => {
+        serialBtn.classList.add("copied");
+        const originalText = serialBtn.querySelector("span:first-child").textContent;
+        serialBtn.querySelector("span:first-child").textContent = "Kopiert!";
+        setTimeout(() => {
+          serialBtn.classList.remove("copied");
+          serialBtn.querySelector("span:first-child").textContent = originalText;
+        }, 1200);
+      });
+    });
+
+    // Klikk på kortet for å utvide / komprimere
+    card.addEventListener("click", () => {
+      card.classList.toggle("expanded");
+      if (card.classList.contains("expanded")) {
+        expandedPrinters.add(p.IP);
       } else {
-        document.getElementById("toggleButton").textContent = showAllPrinters ? "Vis kun kopimaskiner med feil" : "Vis alle kopimaskiner";
-      }
-      
-      searchContainer.classList.toggle("hidden", !showAllPrinters);
-      if (!showAllPrinters) {
-        searchBox.value = "";
-        clearButton.classList.add("hidden");
-        localStorage.removeItem("searchTerm");
-      }
-      fetchPrinterData();
-    });
-
-    searchBox.addEventListener("input", (event) => {
-      const searchTerm = event.target.value.toLowerCase();
-      filterPrinters(searchTerm);
-      clearButton.classList.toggle("hidden", !searchTerm);
-      if (showAllPrinters) {
-        localStorage.setItem("searchTerm", searchTerm);
+        expandedPrinters.delete(p.IP);
       }
     });
 
-    clearButton.addEventListener("click", () => {
-      searchBox.value = "";
-      filterPrinters("");
-      clearButton.classList.add("hidden");
-      localStorage.removeItem("searchTerm");
-    });
+    return card;
   };
 
-  const formatDate = (dateString) => {
-    const parts = dateString.split(', ');
-    const datePart = parts[0].split(' ');
-    const timePart = parts[1];
-    const formattedDateString = `${datePart[2]}-${datePart[1]}-${datePart[0]}T${timePart}`;
-    const date = new Date(formattedDateString);
+  /* ==========================================================================
+     6. Henting og Oppdatering av Printerdata
+     ========================================================================== */
+  const fetchPrinterData = async () => {
+    try {
+      const res = await fetch(`printer_data.json?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
 
-    if (isNaN(date)) return "";
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const printerData = await res.json();
 
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+      if (!Array.isArray(printerData)) {
+        throw new Error("Dataformatet i printer_data.json er ikke en array.");
+      }
 
-    return `${day}.${month}.${year}, ${hours}:${minutes}`;
-  };
+      // Tilbakestill countdown
+      countdownSeconds = 8;
+      if (pulseDot) pulseDot.classList.remove("stale");
 
-  const isMobile = () => window.matchMedia("(max-width: 768px)").matches;
+      // Push-varsler
+      processCriticalNotifications(printerData);
 
-  const debounce = (func, wait) => {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  };
+      // Tell opp statuser
+      let totalCount = printerData.length;
+      let errorCount = 0;
+      let criticalCount = 0;
 
-  const filterPrinters = debounce((searchTerm) => {
-    const printers = container.children;
-    for (const printer of printers) {
-      const searchableContent = printer.textContent.toLowerCase();
-      printer.classList.toggle("hidden", !searchableContent.includes(searchTerm));
+      const criticalPrinters = [];
+      const warningPrinters = [];
+      const okPrinters = [];
+
+      printerData.forEach((p) => {
+        const errors = Array.isArray(p.Errors) ? p.Errors : [];
+        const hasCrit = errors.some((e) => classifyError(e) === "critical");
+        const hasWarn = errors.some((e) => classifyError(e) === "warning");
+
+        if (hasCrit) {
+          criticalCount++;
+          errorCount++;
+          criticalPrinters.push(p);
+        } else if (hasWarn) {
+          errorCount++;
+          warningPrinters.push(p);
+        } else {
+          okPrinters.push(p);
+        }
+      });
+
+      // Oppdater tellere i topp-filter
+      if (totalBadgeCount) totalBadgeCount.textContent = String(totalCount);
+      if (errorBadgeCount) errorBadgeCount.textContent = String(errorCount);
+      if (criticalBadgeCount) criticalBadgeCount.textContent = String(criticalCount);
+
+      // Bevar rulleposisjon
+      const scrollY = window.scrollY;
+
+      // Tøm container
+      if (container) container.innerHTML = "";
+
+      // Hvilke maskiner skal vises basert på valgt filter?
+      let printersToRender = [];
+      if (currentFilter === "all") {
+        printersToRender = [...criticalPrinters, ...warningPrinters, ...okPrinters];
+      } else if (currentFilter === "critical") {
+        printersToRender = criticalPrinters;
+      } else {
+        // "auto": Vis kun maskiner med feil
+        printersToRender = [...criticalPrinters, ...warningPrinters];
+      }
+
+      // Hvis ingen feil finnes og vi er i auto-modus -> vis feiring
+      if (currentFilter === "auto" && printersToRender.length === 0) {
+        if (noErrorsMessage) noErrorsMessage.style.display = "block";
+        if (summaryContainer) summaryContainer.style.display = "none";
+      } else {
+        if (noErrorsMessage) noErrorsMessage.style.display = "none";
+      }
+
+      // Bygg kort
+      printersToRender.forEach((p) => {
+        const errors = Array.isArray(p.Errors) ? p.Errors : [];
+        const hasCrit = errors.some((e) => classifyError(e) === "critical");
+        const hasWarn = errors.some((e) => classifyError(e) === "warning");
+        const statusClass = hasCrit ? "critical" : hasWarn ? "warning" : "ok";
+
+        const card = createPrinterCard(p, statusClass);
+        if (container) container.appendChild(card);
+      });
+
+      // Utfør eventuell aktiv søkefiltrering
+      if (searchBox && searchBox.value.trim() !== "") {
+        applySearchFilter(searchBox.value.trim());
+      }
+
+      // Oppdater oppsummeringspanel dersom tilstede
+      renderSummaryPanel(criticalPrinters, warningPrinters);
+
+      window.scrollTo(0, scrollY);
+    } catch (err) {
+      console.warn("Kunne ikke hente printer_data.json:", err);
+      if (pulseDot) pulseDot.classList.add("stale");
+      const liveText = document.getElementById("liveStatusText");
+      if (liveText) liveText.textContent = "Tilkoblingsfeil";
     }
-    localStorage.setItem("searchTerm", searchTerm);
-  }, 250);
+  };
 
-  initializeNotificationControls();
+  const renderSummaryPanel = (criticalPrinters, warningPrinters) => {
+    if (!summaryContainer) return;
 
-  const startPrinterPolling = async () => {
+    if (criticalPrinters.length === 0 && warningPrinters.length === 0) {
+      summaryContainer.style.display = "none";
+      return;
+    }
+
+    let html = `<h3>⚠️ Aktive feilmeldinger i drift</h3>`;
+
+    if (criticalPrinters.length > 0) {
+      html += `
+        <div class="summary-group">
+          <ul>
+            ${criticalPrinters
+              .map((p) => {
+                const msgs = (p.Errors || [])
+                  .filter((e) => classifyError(e) === "critical")
+                  .map((e) => translateErrorText(parseErrorString(e).message));
+                return `
+                <li class="summary-item critical">
+                  <span><strong>${escapeHtml(p.Name)}:</strong> ${escapeHtml(msgs.join(", "))}</span>
+                  <a href="http://${escapeHtml(p.IP)}" target="_blank" rel="noopener" class="printer-ip-link">Gå til maskin ↗</a>
+                </li>
+              `;
+              })
+              .join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    if (warningPrinters.length > 0) {
+      html += `
+        <div class="summary-group">
+          <ul>
+            ${warningPrinters
+              .map((p) => {
+                const msgs = (p.Errors || [])
+                  .filter((e) => classifyError(e) === "warning")
+                  .map((e) => translateErrorText(parseErrorString(e).message));
+                return `
+                <li class="summary-item warning">
+                  <span><strong>${escapeHtml(p.Name)}:</strong> ${escapeHtml(msgs.join(", "))}</span>
+                  <a href="http://${escapeHtml(p.IP)}" target="_blank" rel="noopener" class="printer-ip-link">Gå til maskin ↗</a>
+                </li>
+              `;
+              })
+              .join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    summaryContainer.innerHTML = html;
+    summaryContainer.style.display = "block";
+  };
+
+  /* ==========================================================================
+     7. Søk og Filter-knapper
+     ========================================================================== */
+  const applySearchFilter = (query) => {
+    const q = query.toLowerCase();
+    const cards = container ? container.querySelectorAll(".printer-card") : [];
+
+    cards.forEach((card) => {
+      const content = card.textContent.toLowerCase();
+      card.classList.toggle("hidden", !content.includes(q));
+    });
+  };
+
+  searchBox?.addEventListener("input", (e) => {
+    const val = e.target.value;
+    applySearchFilter(val);
+    if (clearButton) clearButton.hidden = val === "";
+  });
+
+  clearButton?.addEventListener("click", () => {
+    if (searchBox) searchBox.value = "";
+    applySearchFilter("");
+    if (clearButton) clearButton.hidden = true;
+    searchBox?.focus();
+  });
+
+  const setActiveFilter = (filterName) => {
+    currentFilter = filterName;
+    toggleButton?.classList.toggle("active", filterName === "auto");
+    filterAllBtn?.classList.toggle("active", filterName === "all");
+    filterCriticalBtn?.classList.toggle("active", filterName === "critical");
+    fetchPrinterData();
+  };
+
+  toggleButton?.addEventListener("click", () => setActiveFilter("auto"));
+  filterAllBtn?.addEventListener("click", () => setActiveFilter("all"));
+  filterCriticalBtn?.addEventListener("click", () => setActiveFilter("critical"));
+
+  /* ==========================================================================
+     8. Nedtellings-indikator for polling
+     ========================================================================== */
+  const startPolling = async () => {
     await loadSharedErrorRules();
     fetchPrinterData();
-    setInterval(fetchPrinterData, 8000);
+
+    // Hent data hvert 8. sekund
+    pollIntervalId = setInterval(fetchPrinterData, 8000);
+
+    // Nedtelling hvert sekund
+    countdownIntervalId = setInterval(() => {
+      countdownSeconds = Math.max(0, countdownSeconds - 1);
+      if (refreshCountdown) {
+        refreshCountdown.textContent = `· ${countdownSeconds}s`;
+      }
+    }, 1000);
   };
-  startPrinterPolling();
 
-  clearButton.classList.toggle("hidden", !searchBox.value);
+  startPolling();
 
-  setupEventListeners();
+  /* ==========================================================================
+     9. Mørk / Lys Modus
+     ========================================================================== */
+  const darkModeToggle = document.getElementById("darkModeToggle");
+  const THEME_KEY = "printerThemeMode";
 
-  /* --- Dark mode funksjonalitet --- */
-  function setDarkMode(enabled) {
-    document.body.classList.toggle('dark-mode', Boolean(enabled));
-  }
+  const setTheme = (isDark) => {
+    document.body.classList.toggle("dark-mode", isDark);
+    if (darkModeToggle) {
+      darkModeToggle.textContent = isDark ? "🌙" : "☀️";
+      darkModeToggle.title = isDark ? "Bytt til lys modus" : "Bytt til mørk modus";
+    }
+    localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+  };
 
-  // Sjekk URL-parametere
-  const params = new URLSearchParams(window.location.search);
-  const darkParam = params.get('darkmode');
-  const darkSeasonParam = params.get('darkseason');
+  // Sjekk URL-parametre først (?darkmode=1, ?darkseason=1)
+  const urlParams = new URLSearchParams(window.location.search);
+  const darkParam = urlParams.get("darkmode");
+  const darkSeasonParam = urlParams.get("darkseason");
 
-  // Alltid dark mode
-  if (darkParam === '1' || darkParam === 'true') {
-    setDarkMode(true);
-  }
-
-  // Automatisk dark mode i mørk sesong: november, desember og januar
-  else if (darkSeasonParam === '1' || darkSeasonParam === 'true') {
-    const month = new Date().getMonth(); // Januar = 0, november = 10
+  if (darkParam === "1" || darkParam === "true") {
+    setTheme(true);
+  } else if (darkSeasonParam === "1" || darkSeasonParam === "true") {
+    const month = new Date().getMonth();
     const isDarkSeason = month === 10 || month === 11 || month === 0;
-    setDarkMode(isDarkSeason);
+    setTheme(isDarkSeason);
+  } else {
+    // Sjekk lagret preferanse eller systeminnstilling
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved) {
+      setTheme(saved === "dark");
+    } else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setTheme(prefersDark);
+    }
   }
 
-  // Legg til event listener for dark mode toggle-knapp (må være tilstede i HTML)
-  const darkModeToggle = document.getElementById('darkModeToggle');
-  if (darkModeToggle) {
-    darkModeToggle.addEventListener('click', function() {
-      document.body.classList.toggle('dark-mode');
-    });
-  }
+  darkModeToggle?.addEventListener("click", () => {
+    const isDark = document.body.classList.contains("dark-mode");
+    setTheme(!isDark);
+  });
 });

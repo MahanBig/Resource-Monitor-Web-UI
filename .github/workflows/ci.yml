@@ -1,0 +1,59 @@
+name: CI & Kvalitetssikring
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  backend-tests:
+    name: Test Python Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Installer avhengigheter
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Kjør enhetstester
+        run: |
+          python -m unittest discover -s backend/tests
+
+      - name: Test simulert snapshot
+        run: |
+          python backend/main.py --simulate --once
+
+  frontend-validation:
+    name: Valider Frontend & API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sett opp Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Valider JavaScript-syntaks
+        run: |
+          node -c frontend/assets/js/app.js
+          node -c frontend/assets/js/stats.js
+
+      - name: Sett opp PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo, pdo_mysql
+
+      - name: Valider PHP-syntaks
+        run: |
+          find frontend/api -name "*.php" -exec php -l {} \;

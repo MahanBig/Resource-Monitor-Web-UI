@@ -1,0 +1,84 @@
+# ==============================================================================
+# Ricoh Kopimaskin SNMP & Nettvisning - Samlet Docker Compose
+# ==============================================================================
+# Dette oppsettet lar deg starte enten hele systemet samlet, eller velge
+# kun Frontend/API (Server 2) eller kun Backend Collector (Server 1).
+#
+# Bruk:
+#   docker compose up -d                  Start hele stabelen
+#   docker compose up -d web db           Start kun Frontend & Database (Server 2)
+#   docker compose up -d collector        Start kun Innsamleren (Server 1)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Server 2: Frontend Webserver & PHP API
+  # ----------------------------------------------------------------------------
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ricoh-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=ricoh_db
+      - DB_USER=ricoh_user
+      - DB_PASS=ricoh_hemmelig_passord
+      - LOGGER_KEY=bytt_til_en_lang_hemmelig_nokkel_her
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./frontend/printer_data.json:/var/www/html/printer_data.json
+
+  # ----------------------------------------------------------------------------
+  # Server 2: MariaDB Database (Historikk & Statistikk)
+  # ----------------------------------------------------------------------------
+  db:
+    image: mariadb:10.11
+    container_name: ricoh-db
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD=root_super_passord
+      - MARIADB_DATABASE=ricoh_db
+      - MARIADB_USER=ricoh_user
+      - MARIADB_PASSWORD=ricoh_hemmelig_passord
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ----------------------------------------------------------------------------
+  # Server 1: Python SNMP Collector Daemon
+  # ----------------------------------------------------------------------------
+  collector:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ricoh-collector
+    restart: unless-stopped
+    # På Linux kan network_mode: host aktiveres for direkte tilgang til lokalt LAN:
+    # network_mode: host
+    environment:
+      - POLL_INTERVAL=40
+      - SNMP_COMMUNITY=public
+      - SNMP_TIMEOUT=3.0
+      - LOGGER_URL=http://web/api/process-printers.php
+      - LOGGER_KEY=bytt_til_en_lang_hemmelig_nokkel_her
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - web
+    volumes:
+      - ./backend/printers.json:/app/printers.json
+      # Deler printer_data.json direkte lokalt når begge kjører på samme server:
+      - ./frontend/printer_data.json:/app/printer_data.json
+
+volumes:
+  db_data:

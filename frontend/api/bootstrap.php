@@ -4,11 +4,22 @@ declare(strict_types=1);
 date_default_timezone_set('Europe/Oslo');
 
 $configPath = __DIR__ . '/config.php';
-if (!is_file($configPath)) {
-    throw new RuntimeException('Mangler api/config.php. Kopier config.example.php og fyll inn databaseinformasjon.');
+if (is_file($configPath)) {
+    $config = require $configPath;
+} elseif (getenv('DB_HOST') && getenv('DB_NAME')) {
+    $config = [
+        'db' => [
+            'host' => getenv('DB_HOST'),
+            'name' => getenv('DB_NAME'),
+            'user' => getenv('DB_USER') ?: 'root',
+            'pass' => getenv('DB_PASS') ?: '',
+            'charset' => getenv('DB_CHARSET') ?: 'utf8mb4',
+        ],
+        'logger_key' => getenv('LOGGER_KEY') ?: '',
+    ];
+} else {
+    throw new RuntimeException('Mangler api/config.php. Kopier config.eksempel.php til config.php og fyll inn databaseinformasjon, eller angi miljøvariabler (DB_HOST, DB_NAME, DB_USER, DB_PASS).');
 }
-
-$config = require $configPath;
 
 function app_config(): array
 {

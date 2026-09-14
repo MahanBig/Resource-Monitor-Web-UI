@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -7,72 +6,56 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 try {
     require __DIR__ . '/bootstrap.php';
+    $pdo = db();
 
     $incidentCount = 0;
     $activeErrorCount = 0;
 
-    // Test database connection
+    // Test databaseforbindelse
     $pdo->query('SELECT 1');
 
-    // Count logged incidents
+    // Tell hendelser
     try {
-        $stmt = $pdo->query(
-            'SELECT COUNT(*) FROM printer_incidents'
-        );
-
+        $stmt = $pdo->query('SELECT COUNT(*) FROM printer_incidents');
         $incidentCount = (int) $stmt->fetchColumn();
-
-    } catch (Throwable $e) {
-        // Health endpoint should still work even if
-        // statistics cannot be retrieved.
+    } catch (Throwable) {
         $incidentCount = 0;
     }
 
-    // Count currently active incidents
+    // Tell aktive feil
     try {
-        $stmt = $pdo->query(
-            'SELECT COUNT(*) FROM printer_active_errors'
-        );
-
+        $stmt = $pdo->query('SELECT COUNT(*) FROM printer_active_errors');
         $activeErrorCount = (int) $stmt->fetchColumn();
-
-    } catch (Throwable $e) {
+    } catch (Throwable) {
         $activeErrorCount = 0;
     }
 
     echo json_encode(
         [
             'ok' => true,
-            'logger_version' => 3,
+            'service' => 'Ricoh Web API',
+            'version' => '3.1.0',
             'database' => 'connected',
-            'rules' => is_file(
-                dirname(__DIR__) . '/error_rules.json'
-            )
-                ? 'available'
-                : 'missing',
-            'incidents' => $incidentCount,
+            'rules' => is_file(dirname(__DIR__) . '/error_rules.json') ? 'available' : 'missing',
+            'incidents_logged' => $incidentCount,
             'active_errors' => $activeErrorCount,
             'server_time' => date(DATE_ATOM),
             'timezone' => date_default_timezone_get(),
         ],
-        JSON_PRETTY_PRINT
-        | JSON_UNESCAPED_SLASHES
-        | JSON_UNESCAPED_UNICODE
+        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
     );
 
 } catch (Throwable $e) {
     http_response_code(500);
-
     echo json_encode(
         [
             'ok' => false,
-            'logger_version' => 3,
+            'service' => 'Ricoh Web API',
+            'version' => '3.1.0',
             'database' => 'error',
-            'error' => 'Health check failed',
+            'error' => $e->getMessage(),
             'server_time' => date(DATE_ATOM),
         ],
-        JSON_PRETTY_PRINT
-        | JSON_UNESCAPED_SLASHES
-        | JSON_UNESCAPED_UNICODE
+        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
     );
 }

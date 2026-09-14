@@ -1,0 +1,155 @@
+[
+    {
+        "IP": "159.171.166.137",
+        "Name": "Bib",
+        "Serial": "SIM-0001",
+        "EID": "",
+        "Default": true,
+        "Time": "14 09 2026, 16:29",
+        "Model": "IM C3000",
+        "Ink Levels": [
+            "85%",
+            "0%",
+            "70%",
+            "50%",
+            "90%"
+        ],
+        "Tray Information": [
+            "500",
+            "250",
+            "-3",
+            "120",
+            "500"
+        ],
+        "Errors": [
+            "Papirstopp {40440}"
+        ]
+    },
+    {
+        "IP": "159.171.166.143",
+        "Name": "A8",
+        "Serial": "SIM-0002",
+        "EID": "",
+        "Default": true,
+        "Time": "14 09 2026, 16:29",
+        "Model": "IM C5500",
+        "Ink Levels": [
+            "70%",
+            "0%",
+            "60%",
+            "42%",
+            "8%"
+        ],
+        "Tray Information": [
+            "500",
+            "0",
+            "-3",
+            "120",
+            "500"
+        ],
+        "Errors": [
+            "Lite: gul toner {10075}",
+            "Tomt for papir: magasin 2 {13400}"
+        ]
+    },
+    {
+        "IP": "159.171.166.142",
+        "Name": "E21",
+        "Serial": "SIM-0003",
+        "EID": "",
+        "Default": true,
+        "Time": "14 09 2026, 16:29",
+        "Model": "IM C300",
+        "Ink Levels": [
+            "55%",
+            "0%",
+            "50%",
+            "34%",
+            "66%"
+        ],
+        "Tray Information": [
+            "500",
+            "250",
+            "-3",
+            "120",
+            "500"
+        ],
+        "Errors": [
+            "Deksel åpent: frontdeksel {40010}"
+        ]
+    },
+    {
+        "IP": "159.171.166.154",
+        "Name": "Adm",
+        "Serial": "SIM-0004",
+        "EID": "",
+        "Default": true,
+        "Time": "14 09 2026, 16:29",
+        "Model": "IM C3010",
+        "Ink Levels": [
+            "40%",
+            "0%",
+            "40%",
+            "26%",
+            "54%"
+        ],
+        "Tray Information": [
+            "500",
+            "250",
+            "-3",
+            "120",
+            "500"
+        ],
+        "Errors": [
+            "Trenger flere stifter {40490}"
+        ]
+    },
+    {
+        "IP": "159.171.166.151",
+        "Name": "A-Gang",
+        "Serial": "SIM-0005",
+        "EID": "",
+        "Default": true,
+        "Time": "14 09 2026, 16:29",
+        "Model": "IM C5510",
+        "Ink Levels": [
+            "25%",
+            "0%",
+            "30%",
+            "18%",
+            "42%"
+        ],
+        "Tray Information": [
+            "500",
+            "250",
+            "-3",
+            "120",
+            "500"
+        ],
+        "Errors": []
+    },
+    {
+        "IP": "159.171.166.140",
+        "Name": "C-Gang",
+        "Serial": "SIM-0006",
+        "EID": "",
+        "Default": true,
+        "Time": "14 09 2026, 16:29",
+        "Model": "IM C3000",
+        "Ink Levels": [
+            "10%",
+            "0%",
+            "20%",
+            "10%",
+            "30%"
+        ],
+        "Tray Information": [
+            "500",
+            "250",
+            "-3",
+            "120",
+            "500"
+        ],
+        "Errors": []
+    }
+]

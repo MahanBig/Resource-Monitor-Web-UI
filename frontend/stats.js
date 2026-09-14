@@ -1,3 +1,9 @@
+/**
+ * ==============================================================================
+ * Ricoh Kopimaskin Status - Statistikk & Historikk Dashboard (v3.1)
+ * ==============================================================================
+ */
+
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const statsMode = params.get("stats") === "1" || params.get("stats") === "true";
@@ -8,16 +14,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const toggleStatsMode = () => {
     const url = new URL(window.location.href);
-    if (statsMode) url.searchParams.delete("stats");
-    else url.searchParams.set("stats", "1");
+    if (statsMode) {
+      url.searchParams.delete("stats");
+    } else {
+      url.searchParams.set("stats", "1");
+    }
     window.location.href = url.toString();
   };
 
   if (statsToggleButton) {
-    statsToggleButton.textContent = statsMode ? "🖨 Printere" : "📊 Statistikk";
-    statsToggleButton.title = statsMode
-      ? "Tilbake til printervisning"
-      : "Åpne statistikk og hendelseslogg";
+    statsToggleButton.textContent = statsMode ? "🖨️ Kopimaskiner" : "📊 Statistikk";
+    statsToggleButton.title = statsMode ? "Gå tilbake til direkte printerstatus" : "Åpne statistikk og hendelseshistorikk";
     statsToggleButton.addEventListener("click", toggleStatsMode);
   }
 
@@ -32,16 +39,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const byId = (id) => document.getElementById(id);
 
+  // KPI-elementer
   const statOpened = byId("statOpened");
   const statResolved = byId("statResolved");
   const statCritical = byId("statCritical");
   const statWarning = byId("statWarning");
-  const statOther = byId("statOther");
   const statPrinters = byId("statPrinters");
   const statAvgResolution = byId("statAvgResolution");
   const statActive = byId("statActive");
-  const statActiveCritical = byId("statActiveCritical");
-  const statActiveWarning = byId("statActiveWarning");
 
   const statTonerReplaced = byId("statTonerReplaced");
   const statTonerAlerts = byId("statTonerAlerts");
@@ -50,7 +55,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const statPaperEmpty = byId("statPaperEmpty");
   const statActivePaper = byId("statActivePaper");
 
-  const statsLastUpdated = byId("statsLastUpdated");
   const statsPeriodLabel = byId("statsPeriodLabel");
   const printerLeaderboard = byId("printerLeaderboard");
   const errorLeaderboard = byId("errorLeaderboard");
@@ -58,7 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const paperLeaderboard = byId("paperLeaderboard");
   const longestIncident = byId("longestIncident");
   const activeIncidentList = byId("activeIncidentList");
-  const activeConsumableList = byId("activeConsumableList");
   const eventLog = byId("eventLog");
   const eventCount = byId("eventCount");
   const periodButtons = Array.from(document.querySelectorAll("[data-period]"));
@@ -66,12 +69,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedPeriod = "today";
   let refreshTimer = null;
 
-  const escapeHtml = (value) => String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  const escapeHtml = (val) =>
+    String(val ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
 
   const formatDuration = (seconds) => {
     if (seconds === null || seconds === undefined || Number.isNaN(Number(seconds))) return "–";
@@ -80,296 +84,255 @@ document.addEventListener("DOMContentLoaded", () => {
     const minutes = Math.floor(total / 60);
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    if (hours < 24) return remainingMinutes ? `${hours}t ${remainingMinutes}m` : `${hours}t`;
+    const remMinutes = minutes % 60;
+    if (hours < 24) return remMinutes ? `${hours}t ${remMinutes}m` : `${hours}t`;
     const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    return remainingHours ? `${days}d ${remainingHours}t` : `${days}d`;
+    const remHours = hours % 24;
+    return remHours ? `${days}d ${remHours}t` : `${days}d`;
   };
 
-  const formatDateTime = (value) => {
-    if (!value) return "–";
-    const date = new Date(String(value).replace(" ", "T"));
-    if (Number.isNaN(date.getTime())) return value;
+  const formatDateTime = (val) => {
+    if (!val) return "–";
+    const date = new Date(String(val).replace(" ", "T"));
+    if (Number.isNaN(date.getTime())) return val;
     return new Intl.DateTimeFormat("nb-NO", {
-      day: "2-digit", month: "2-digit", year: "2-digit",
-      hour: "2-digit", minute: "2-digit"
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(date);
   };
 
-  const severityLabel = (severity) => ({
-    critical: "Kritisk",
-    warning: "Warning",
-    toner: "Toner",
-    paper: "Papir",
-    other: "Annet"
-  }[severity] || "Annet");
+  const severityLabel = (sev) =>
+    ({
+      critical: "Kritisk",
+      warning: "Advarsel",
+      toner: "Toner",
+      paper: "Papir",
+      other: "Annet",
+    }[sev] || "Annet");
 
-  const colorLabel = (color) => ({
-    black: "Sort",
-    cyan: "Cyan",
-    magenta: "Magenta",
-    yellow: "Gul",
-    waste: "Brukt toner",
-    unknown: "Ukjent"
-  }[color] || "Ukjent");
+  const severityPill = (sev) =>
+    `<span class="severity-pill severity-${escapeHtml(sev)}">${severityLabel(sev)}</span>`;
 
-  const severityPill = (severity) =>
-    `<span class="severity-pill severity-${escapeHtml(severity)}">${severityLabel(severity)}</span>`;
-
+  /* Rendring av Toppliste Maskiner */
   const renderPrinterLeaderboard = (rows) => {
-    if (!rows?.length) {
-      printerLeaderboard.innerHTML = '<tr><td colspan="6" class="empty-state">Ingen tekniske feil i perioden.</td></tr>';
+    if (!rows || rows.length === 0) {
+      printerLeaderboard.innerHTML = '<tr><td colspan="6" class="empty-state">Ingen registrerte feil i valgt periode.</td></tr>';
       return;
     }
-    printerLeaderboard.innerHTML = rows.map((row, index) => `
-      <tr>
-        <td class="rank-number">${index + 1}</td>
-        <td><strong>${escapeHtml(row.printer_name)}</strong><br><small>${escapeHtml(row.printer_model || "")}</small></td>
-        <td>${Number(row.total)}</td>
-        <td>${Number(row.critical)}</td>
-        <td>${Number(row.warning)}</td>
-        <td>${Number(row.other)}</td>
-      </tr>
-    `).join("");
+
+    printerLeaderboard.innerHTML = rows
+      .map((r, idx) => {
+        const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`;
+        return `
+        <tr>
+          <td class="rank-number">${medal}</td>
+          <td><strong>${escapeHtml(r.printer_name)}</strong><br><small style="color: var(--text-muted);">${escapeHtml(r.printer_model || "")}</small></td>
+          <td><strong>${Number(r.total)}</strong></td>
+          <td style="color: var(--status-critical); font-weight: 700;">${Number(r.critical)}</td>
+          <td style="color: var(--status-warning); font-weight: 600;">${Number(r.warning)}</td>
+          <td style="color: var(--text-muted);">${Number(r.other)}</td>
+        </tr>
+      `;
+      })
+      .join("");
   };
 
+  /* Rendring av Vanligste Feil */
   const renderErrorLeaderboard = (rows) => {
-    if (!rows?.length) {
-      errorLeaderboard.innerHTML = '<tr><td colspan="4" class="empty-state">Ingen tekniske feil i perioden.</td></tr>';
+    if (!rows || rows.length === 0) {
+      errorLeaderboard.innerHTML = '<tr><td colspan="4" class="empty-state">Ingen registrerte feil i perioden.</td></tr>';
       return;
     }
-    errorLeaderboard.innerHTML = rows.map((row, index) => `
-      <tr>
-        <td class="rank-number">${index + 1}</td>
-        <td>${severityPill(row.severity)} ${escapeHtml(row.error_message)}${row.error_code ? ` <small>{${escapeHtml(row.error_code)}}</small>` : ""}</td>
-        <td>${Number(row.total)}</td>
-        <td>${formatDuration(row.avg_resolution_seconds)}</td>
-      </tr>
-    `).join("");
+
+    errorLeaderboard.innerHTML = rows
+      .map((r, idx) => {
+        const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`;
+        return `
+        <tr>
+          <td class="rank-number">${medal}</td>
+          <td>${severityPill(r.severity)} <strong>${escapeHtml(r.error_message)}</strong>${r.error_code ? ` <small class="error-code-chip">{${escapeHtml(r.error_code)}}</small>` : ""}</td>
+          <td><strong>${Number(r.total)}</strong></td>
+          <td style="color: var(--text-muted);">${formatDuration(r.avg_resolution_seconds)}</td>
+        </tr>
+      `;
+      })
+      .join("");
   };
 
+  /* Rendring av Tonerbytter */
   const renderTonerLeaderboard = (rows) => {
-    if (!rows?.length) {
-      tonerLeaderboard.innerHTML = '<tr><td colspan="8" class="empty-state">Ingen bekreftede tonerbytter i perioden.</td></tr>';
+    if (!rows || rows.length === 0) {
+      tonerLeaderboard.innerHTML = '<tr><td colspan="9" class="empty-state">Ingen bekreftede tonerbytter i perioden.</td></tr>';
       return;
     }
-    tonerLeaderboard.innerHTML = rows.map((row, index) => `
+
+    tonerLeaderboard.innerHTML = rows
+      .map((r, idx) => `
       <tr>
-        <td class="rank-number">${index + 1}</td>
-        <td><strong>${escapeHtml(row.printer_name)}</strong><br><small>${escapeHtml(row.printer_model || "")}</small></td>
-        <td><strong>${Number(row.total)}</strong></td>
-        <td>${Number(row.black_count)}</td>
-        <td>${Number(row.cyan_count)}</td>
-        <td>${Number(row.magenta_count)}</td>
-        <td>${Number(row.yellow_count)}</td>
-        <td>${Number(row.waste_count)}</td>
+        <td class="rank-number">${idx + 1}</td>
+        <td><strong>${escapeHtml(r.printer_name)}</strong></td>
+        <td><strong>${Number(r.total)}</strong></td>
+        <td style="color: var(--text-secondary);">${Number(r.black_count)}</td>
+        <td style="color: var(--ink-cyan);">${Number(r.cyan_count)}</td>
+        <td style="color: var(--ink-magenta);">${Number(r.magenta_count)}</td>
+        <td style="color: var(--ink-yellow);">${Number(r.yellow_count)}</td>
+        <td style="color: var(--text-muted);">${Number(r.waste_count)}</td>
       </tr>
-    `).join("");
+    `)
+      .join("");
   };
 
+  /* Rendring av Papirpåfyllinger */
   const renderPaperLeaderboard = (rows) => {
-    if (!rows?.length) {
-      paperLeaderboard.innerHTML = '<tr><td colspan="3" class="empty-state">Ingen registrerte papirpåfyllinger i perioden.</td></tr>';
+    if (!rows || rows.length === 0) {
+      paperLeaderboard.innerHTML = '<tr><td colspan="3" class="empty-state">Ingen papirpåfyllinger registrert i perioden.</td></tr>';
       return;
     }
-    paperLeaderboard.innerHTML = rows.map((row, index) => `
+
+    paperLeaderboard.innerHTML = rows
+      .map((r, idx) => `
       <tr>
-        <td class="rank-number">${index + 1}</td>
-        <td><strong>${escapeHtml(row.printer_name)}</strong></td>
-        <td>${Number(row.total)}</td>
+        <td class="rank-number">${idx + 1}</td>
+        <td><strong>${escapeHtml(r.printer_name)}</strong></td>
+        <td><strong style="color: var(--ink-cyan);">${Number(r.total)}</strong></td>
       </tr>
-    `).join("");
+    `)
+      .join("");
   };
 
-  const renderLongestIncident = (incident) => {
-    if (!incident) {
-      longestIncident.className = "longest-incident empty-state";
-      longestIncident.textContent = "Ingen løste tekniske hendelser i perioden.";
+  /* Lengste hendelse */
+  const renderLongestIncident = (row) => {
+    if (!longestIncident) return;
+    if (!row) {
+      longestIncident.className = "empty-state";
+      longestIncident.textContent = "Ingen løste hendelser i valgt periode.";
       return;
     }
-    longestIncident.className = "longest-incident";
+
+    longestIncident.className = "longest-incident-card";
     longestIncident.innerHTML = `
-      <strong>${escapeHtml(incident.printer_name)}</strong><br>
-      ${severityPill(incident.severity)} ${escapeHtml(incident.error_message)}${incident.error_code ? ` {${escapeHtml(incident.error_code)}}` : ""}<br>
-      <span>Varighet: <strong>${formatDuration(incident.duration_seconds)}</strong></span><br>
-      <small>${formatDateTime(incident.opened_at)} → ${formatDateTime(incident.resolved_at)}</small>
+      <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.35rem;">
+        ${severityPill(row.severity)} ${escapeHtml(row.printer_name)}
+      </div>
+      <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">
+        ${escapeHtml(row.error_message)}
+      </div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">
+        Varighet: <strong style="color: var(--brand-ricoh);">${formatDuration(row.duration_seconds)}</strong>
+        (${formatDateTime(row.opened_at)} → ${formatDateTime(row.resolved_at)})
+      </div>
     `;
   };
 
+  /* Aktive hendelser */
   const renderActiveIncidents = (rows) => {
-    if (!rows?.length) {
-      activeIncidentList.innerHTML = '<div class="empty-state">Ingen aktive tekniske hendelser.</div>';
+    if (!activeIncidentList) return;
+    if (!rows || rows.length === 0) {
+      activeIncidentList.innerHTML = '<div class="empty-state">Ingen uoppklarte feil for øyeblikket.</div>';
       return;
     }
-    activeIncidentList.innerHTML = rows.map(row => `
-      <div class="active-incident-item">
-        ${severityPill(row.severity)}
-        <strong>${escapeHtml(row.printer_name)}</strong> – ${escapeHtml(row.error_message)}${row.error_code ? ` {${escapeHtml(row.error_code)}}` : ""}
-        <span class="meta">Startet ${formatDateTime(row.opened_at)} · aktiv i ${formatDuration(row.duration_seconds)}</span>
+
+    activeIncidentList.innerHTML = rows
+      .map((r) => `
+      <div class="event-entry">
+        <div class="event-details">
+          ${severityPill(r.severity)}
+          <span><strong>${escapeHtml(r.printer_name)}:</strong> ${escapeHtml(r.error_message)}</span>
+        </div>
+        <span class="event-time">Aktiv i ${formatDuration(r.duration_seconds)}</span>
       </div>
-    `).join("");
+    `)
+      .join("");
   };
 
-  const renderActiveConsumables = (rows) => {
-    if (!rows?.length) {
-      activeConsumableList.innerHTML = '<div class="empty-state">Ingen aktive toner- eller papirvarsler.</div>';
+  /* Hendelseslogg */
+  const renderEventLog = (events) => {
+    if (!eventLog) return;
+    if (!events || events.length === 0) {
+      eventLog.innerHTML = '<div class="empty-state">Ingen hendelser registrert i perioden.</div>';
+      if (eventCount) eventCount.textContent = "0 hendelser";
       return;
     }
 
-    activeConsumableList.innerHTML = rows.map(row => {
-      const isToner = row.severity === "toner";
-      const detail = isToner
-        ? `${colorLabel(row.consumable_color)}${row.toner_level_last !== null && row.toner_level_last !== undefined ? ` · sist målt ${Number(row.toner_level_last)} %` : ""}`
-        : `${row.paper_tray ? `Magasin ${escapeHtml(row.paper_tray)} · ` : ""}${escapeHtml(row.error_message)}`;
-      const pending = row.missing_since
-        ? `<span class="meta pending-confirmation">Varsel borte siden ${formatDateTime(row.missing_since)} – venter på bekreftelse</span>`
-        : `<span class="meta">Registrert ${formatDateTime(row.opened_at)} · ${formatDuration(row.duration_seconds)}</span>`;
+    if (eventCount) eventCount.textContent = `${events.length} hendelser`;
 
-      return `
-        <div class="active-incident-item consumable-item">
-          ${severityPill(row.severity)}
-          <strong>${escapeHtml(row.printer_name)}</strong> – ${detail}
-          ${pending}
+    eventLog.innerHTML = events
+      .map((e) => {
+        const isResolved = e.event_type === "resolved";
+        const icon = isResolved ? "✅" : "⚠️";
+        return `
+        <div class="event-entry">
+          <div class="event-details">
+            <span>${icon}</span>
+            ${severityPill(e.severity)}
+            <span><strong>${escapeHtml(e.printer_name)}</strong>: ${escapeHtml(e.error_message)}</span>
+          </div>
+          <span class="event-time">${formatDateTime(e.event_at)}</span>
         </div>
       `;
-    }).join("");
+      })
+      .join("");
   };
 
-  const renderEvents = (events) => {
-    eventCount.textContent = `${events?.length || 0} viste hendelser`;
-    if (!events?.length) {
-      eventLog.innerHTML = '<div class="empty-state">Ingen hendelser i perioden.</div>';
-      return;
-    }
+  /* Hovedfunksjon for lasting av statistikk */
+  const loadStats = async () => {
+    try {
+      const statsRes = await fetch(`api/stats.php?period=${encodeURIComponent(selectedPeriod)}&_t=${Date.now()}`);
+      if (!statsRes.ok) throw new Error(`HTTP ${statsRes.status}`);
+      const data = await statsRes.json();
 
-    eventLog.innerHTML = events.map(event => {
-      const isResolved = event.event_type === "resolved";
-      let icon = "🔵";
-      let action = isResolved ? "Løst" : "Oppstod";
-      let message = `${escapeHtml(event.error_message)}${event.error_code ? ` {${escapeHtml(event.error_code)}}` : ""}`;
+      if (!data.ok) throw new Error(data.error || "Statistikkfeil");
 
-      if (event.severity === "critical") icon = isResolved ? "✅" : "🔴";
-      else if (event.severity === "warning") icon = isResolved ? "✅" : "🟠";
-      else if (event.severity === "toner") {
-        icon = isResolved ? "✅" : "🖨";
-        if (isResolved && event.resolution_type === "replaced") {
-          action = "Toner byttet";
-          message = colorLabel(event.consumable_color);
-          if (event.toner_level_resolved !== null && event.toner_level_resolved !== undefined) {
-            message += ` · ${Number(event.toner_level_resolved)} %`;
-          }
-          if (Number(event.replacement_confirmed_by_level) === 1) message += " · nivå bekreftet";
-        } else {
-          action = "Tonervarsel";
-          message = `${colorLabel(event.consumable_color)} · ${message}`;
-        }
-      } else if (event.severity === "paper") {
-        icon = isResolved ? "✅" : "📄";
-        if (isResolved && event.resolution_type === "refilled") {
-          action = "Papir fylt på";
-          message = event.paper_tray ? `Magasin ${escapeHtml(event.paper_tray)}` : escapeHtml(event.error_message);
-        } else {
-          action = "Tomt for papir";
-        }
-      } else if (isResolved) {
-        icon = "✅";
+      const s = data.summary || {};
+      if (statOpened) statOpened.textContent = s.opened_count ?? "0";
+      if (statResolved) statResolved.textContent = s.resolved_count ?? "0";
+      if (statCritical) statCritical.textContent = s.critical_count ?? "0";
+      if (statWarning) statWarning.textContent = s.warning_count ?? "0";
+      if (statPrinters) statPrinters.textContent = s.affected_printers ?? "0";
+      if (statAvgResolution) statAvgResolution.textContent = formatDuration(s.avg_resolution_seconds);
+      if (statActive) statActive.textContent = s.active_total ?? "0";
+
+      if (statTonerReplaced) statTonerReplaced.textContent = s.toner_replaced_count ?? "0";
+      if (statTonerAlerts) statTonerAlerts.textContent = s.toner_alerts_count ?? "0";
+      if (statActiveToner) statActiveToner.textContent = s.active_toner ?? "0";
+      if (statPaperRefilled) statPaperRefilled.textContent = s.paper_refilled_count ?? "0";
+      if (statPaperEmpty) statPaperEmpty.textContent = s.paper_empty_count ?? "0";
+      if (statActivePaper) statActivePaper.textContent = s.active_paper ?? "0";
+
+      if (statsPeriodLabel && data.period) {
+        statsPeriodLabel.textContent = `Periode: ${data.period.label}`;
       }
 
-      return `
-        <div class="event-row">
-          <div class="event-time">${formatDateTime(event.event_at)}</div>
-          <div class="event-icon" aria-hidden="true">${icon}</div>
-          <div class="event-printer">${escapeHtml(event.printer_name)}</div>
-          <div class="event-message">
-            ${severityPill(event.severity)}
-            ${action}: ${message}
-          </div>
-          <div class="event-duration">${isResolved ? formatDuration(event.duration_seconds) : ""}</div>
-        </div>
-      `;
-    }).join("");
-  };
+      renderPrinterLeaderboard(data.printer_leaderboard);
+      renderErrorLeaderboard(data.error_leaderboard);
+      renderTonerLeaderboard(data.toner_leaderboard);
+      renderPaperLeaderboard(data.paper_leaderboard);
+      renderLongestIncident(data.longest_incident);
+      renderActiveIncidents(data.active_incidents);
 
-  const loadingElements = [
-    statOpened, statResolved, statCritical, statWarning, statOther, statPrinters,
-    statAvgResolution, statActive, statActiveCritical, statActiveWarning,
-    statTonerReplaced, statTonerAlerts, statActiveToner,
-    statPaperRefilled, statPaperEmpty, statActivePaper
-  ];
-
-  const setLoading = () => loadingElements.forEach(element => {
-    if (element) element.textContent = "…";
-  });
-
-  const showError = (message) => {
-    eventLog.innerHTML = `<div class="stats-error">Kunne ikke laste statistikk: ${escapeHtml(message)}</div>`;
-  };
-
-  const loadDashboard = async () => {
-    setLoading();
-
-    try {
-      const [statsResponse, eventsResponse] = await Promise.all([
-        fetch(`api/stats.php?period=${encodeURIComponent(selectedPeriod)}`, { cache: "no-store" }),
-        fetch(`api/events.php?period=${encodeURIComponent(selectedPeriod)}&limit=200`, { cache: "no-store" })
-      ]);
-
-      if (!statsResponse.ok) throw new Error(`stats.php svarte HTTP ${statsResponse.status}`);
-      if (!eventsResponse.ok) throw new Error(`events.php svarte HTTP ${eventsResponse.status}`);
-
-      const stats = await statsResponse.json();
-      const events = await eventsResponse.json();
-
-      statOpened.textContent = Number(stats.summary.opened_count || 0);
-      statResolved.textContent = Number(stats.summary.resolved_count || 0);
-      statCritical.textContent = Number(stats.summary.critical_count || 0);
-      statWarning.textContent = Number(stats.summary.warning_count || 0);
-      statOther.textContent = Number(stats.summary.other_count || 0);
-      statPrinters.textContent = Number(stats.summary.affected_printers || 0);
-      statAvgResolution.textContent = formatDuration(stats.summary.avg_resolution_seconds);
-      statActive.textContent = Number(stats.summary.active_total || 0);
-      statActiveCritical.textContent = Number(stats.summary.active_critical || 0);
-      statActiveWarning.textContent = Number(stats.summary.active_warning || 0);
-
-      statTonerReplaced.textContent = Number(stats.summary.toner_replaced_count || 0);
-      statTonerAlerts.textContent = Number(stats.summary.toner_alerts_count || 0);
-      statActiveToner.textContent = Number(stats.summary.active_toner || 0);
-      statPaperRefilled.textContent = Number(stats.summary.paper_refilled_count || 0);
-      statPaperEmpty.textContent = Number(stats.summary.paper_empty_count || 0);
-      statActivePaper.textContent = Number(stats.summary.active_paper || 0);
-
-      statsPeriodLabel.textContent = stats.period.label;
-      statsLastUpdated.textContent = `Oppdatert ${new Intl.DateTimeFormat("nb-NO", {
-        hour: "2-digit", minute: "2-digit", second: "2-digit"
-      }).format(new Date())}`;
-
-      renderPrinterLeaderboard(stats.printer_leaderboard);
-      renderErrorLeaderboard(stats.error_leaderboard);
-      renderTonerLeaderboard(stats.toner_leaderboard);
-      renderPaperLeaderboard(stats.paper_leaderboard);
-      renderLongestIncident(stats.longest_incident);
-      renderActiveIncidents(stats.active_incidents);
-      renderActiveConsumables(stats.active_consumables);
-      renderEvents(events.events);
-    } catch (error) {
-      console.error(error);
-      showError(error.message);
+      // Hent hendelseslogg
+      const eventsRes = await fetch(`api/events.php?period=${encodeURIComponent(selectedPeriod)}&limit=100&_t=${Date.now()}`);
+      if (eventsRes.ok) {
+        const evData = await eventsRes.json();
+        renderEventLog(evData.events || []);
+      }
+    } catch (err) {
+      console.warn("Kunne ikke hente statistikk:", err);
     }
   };
 
-  periodButtons.forEach(button => {
-    button.addEventListener("click", () => {
-      selectedPeriod = button.dataset.period;
-      periodButtons.forEach(item => item.classList.toggle("active", item === button));
-      loadDashboard();
+  periodButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      periodButtons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedPeriod = btn.dataset.period || "today";
+      loadStats();
     });
   });
 
-  loadDashboard();
-  refreshTimer = window.setInterval(loadDashboard, 30000);
-
-  window.addEventListener("beforeunload", () => {
-    if (refreshTimer) window.clearInterval(refreshTimer);
-  });
+  loadStats();
+  refreshTimer = setInterval(loadStats, 30000);
 });
