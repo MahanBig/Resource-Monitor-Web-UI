@@ -1,0 +1,30 @@
+{
+  "interval_seconds": 40,
+  "printers_file": "Printers.json",
+
+  "snmp": {
+    "community": "public",
+    "port": 161,
+    "timeout": 6,
+    "retries": 2
+  },
+
+  "output": {
+    "file": "printer_data.json"
+  },
+
+  "sftp": {
+    "host": "sftp.example.com",
+    "port": 22,
+    "user": "USERNAME",
+    "pass": "PASSWORD",
+    "key_file": "",
+    "path": "/www/printstatus/",
+    "verify_host_key": false
+  },
+
+  "logger": {
+    "url": "https://example.com/printstatus/api/process-printers.php",
+    "key": "SAME_SECRET_AS_LOGGER_KEY_IN_api/config.php"
+  }
+}

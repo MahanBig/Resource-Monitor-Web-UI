@@ -1,0 +1,21 @@
+[
+  { "message": "Energisparemodus {10033}", "category": null, "level": null },
+  { "message": "Energy saver mode", "category": null, "level": null },
+  { "message": "Papirstopp {40132}", "category": "critical", "level": "critical" },
+  { "message": "Paper jam", "category": "critical", "level": "critical" },
+  { "message": "Deksel åpent", "category": "critical", "level": "critical" },
+  { "message": "Tom: gul toner", "category": "toner", "level": "critical" },
+  { "message": "Empty: cyan toner", "category": "toner", "level": "critical" },
+  { "message": "Nesten tom: sort toner {10072}", "category": "toner", "level": "warning" },
+  { "message": "Almost empty: cyan toner", "category": "toner", "level": "warning" },
+  { "message": "Replace waste toner bottle", "category": "toner", "level": "critical" },
+  { "message": "Tomt for papir: magasin 1 {13400}", "category": "paper", "level": "warning" },
+  { "message": "Out of paper: tray 2", "category": "paper", "level": "warning" },
+  { "message": "Forbereder", "category": "warning", "level": "warning" },
+  { "message": "Finner ikke: magasin 2", "category": "warning", "level": "warning" },
+  { "message": "Lavt niv: stifter", "category": "warning", "level": "warning" },
+  { "message": "Trenger flere stifter", "category": "critical", "level": "critical" },
+  { "message": "Error fetching errors", "category": "critical", "level": "critical" },
+  { "message": "Something unusual {99999}", "category": "other", "level": "info" },
+  { "message": "Yellow lamp blinking", "category": "other", "level": "info" }
+]

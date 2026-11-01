@@ -1,22 +1,117 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="manifest" href="/site.webmanifest" />
-    <meta charset="UTF-8" />
-    <meta Cache-Control: max-age="300" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Printer Status Dashboard</title>
-    <link rel="stylesheet" href="style.css" />
-    <script src="script.js" defer></script>
-  </head>
-  <body>
-    <div class="dashboard-header">
-      <h1>Printer Status Dashboard</h1>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e1116" media="(prefers-color-scheme: dark)">
+  <title>Printer status</title>
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/app.css">
+  <script>
+    // Apply the theme before first paint to avoid a flash.
+    (function () {
+      var p = new URLSearchParams(location.search), theme = null;
+      try { theme = localStorage.getItem("rm_theme"); } catch (e) {}
+      var on = function (v) { return v === "1" || v === "true"; };
+      if (on(p.get("darkmode"))) theme = "dark";
+      else if (on(p.get("darkseason"))) theme = [10, 11, 0].indexOf(new Date().getMonth()) >= 0 ? "dark" : "light";
+      if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img id="brandLogo" class="brand-logo" alt="" hidden>
+        <div>
+          <h1 id="appTitle">Printer status</h1>
+          <p id="liveStatus" class="live" data-mode="ok" role="status">
+            <span class="live-dot" aria-hidden="true"></span><span id="liveText">…</span>
+          </p>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist">
+        <button type="button" id="tabPrinters" role="tab" aria-selected="true" data-i18n="nav.printers">Printers</button>
+        <button type="button" id="tabStats" role="tab" aria-selected="false" data-i18n="nav.stats" hidden>Statistics</button>
+      </nav>
+
+      <div class="toolbar">
+        <button type="button" id="notificationToggle" class="btn btn-ghost" aria-pressed="false">
+          <span data-icon aria-hidden="true"></span><span data-label class="btn-label"></span>
+        </button>
+        <button type="button" id="installButton" class="btn btn-ghost" hidden>
+          <span class="btn-label" data-i18n="nav.install"></span>
+        </button>
+        <label class="select">
+          <span class="sr-only" data-i18n="nav.language">Language</span>
+          <select id="languageSelect"></select>
+        </label>
+        <button type="button" id="themeToggle" class="btn btn-icon"></button>
+      </div>
     </div>
-    <div id="printerInfo" class="printer-container"></div>
-  </body>
+  </header>
+
+  <main class="page">
+    <section id="printerView">
+      <div class="tiles">
+        <button type="button" class="tile tone-critical" data-filter="critical" aria-pressed="false">
+          <span class="tile-value" id="count-critical">–</span><span class="tile-label" data-i18n="summary.critical"></span>
+        </button>
+        <button type="button" class="tile tone-warning" data-filter="warning" aria-pressed="false">
+          <span class="tile-value" id="count-warning">–</span><span class="tile-label" data-i18n="summary.warning"></span>
+        </button>
+        <button type="button" class="tile tone-ok" data-filter="ok" aria-pressed="false">
+          <span class="tile-value" id="count-ok">–</span><span class="tile-label" data-i18n="summary.ok"></span>
+        </button>
+        <button type="button" class="tile tone-service" id="tile-service" data-filter="service" aria-pressed="false" hidden>
+          <span class="tile-value" id="count-service">–</span><span class="tile-label" data-i18n="summary.service"></span>
+        </button>
+      </div>
+
+      <div class="filters">
+        <div class="segmented" role="group">
+          <button type="button" data-view="attention" aria-pressed="true" data-i18n="filter.attention"></button>
+          <button type="button" data-view="all" aria-pressed="false" data-i18n="filter.all"></button>
+        </div>
+        <div class="search">
+          <input type="search" id="searchBox" autocomplete="off" data-i18n-placeholder="filter.search" data-i18n-aria-label="filter.search">
+          <button type="button" id="clearSearch" class="btn-icon-small" data-i18n-aria-label="filter.clear" hidden>✕</button>
+        </div>
+      </div>
+
+      <div id="banner" class="banner" role="alert" hidden></div>
+
+      <div class="layout">
+        <div class="layout-main">
+          <div id="printerGrid" class="printer-grid"></div>
+          <p id="noMatch" class="no-match" hidden></p>
+          <div id="emptyState" class="empty-state" hidden>
+            <h2 id="emptyTitle"></h2>
+            <p id="emptyText"></p>
+          </div>
+        </div>
+        <aside id="alertsPanel" class="card alerts-panel" hidden>
+          <h2 data-i18n="alerts.title"></h2>
+          <ul id="alertsList" class="alerts"></ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="statsView" class="stats" hidden></section>
+  </main>
+
+  <footer class="footer">
+    <span id="adminLink" hidden><a href="admin/" data-i18n="nav.admin">Service admin</a> ·</span>
+    <a href="https://github.com/MahanBig/Resource-Monitor-Web-UI" target="_blank" rel="noopener noreferrer" data-i18n="app.footer">Resource Monitor Web UI</a>
+  </footer>
+</body>
 </html>
-<!-- Made by Mahan Baghdadi-->

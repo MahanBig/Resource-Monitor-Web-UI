@@ -1,0 +1,63 @@
+{
+  "_readme": [
+    "Shared by the website (js/rules.js) and the history logger (api/bootstrap.php).",
+    "Each printer message looks like 'Text {code}'. A group matches when the code is in 'codes',",
+    "the text starts with one of 'starts', contains one of 'contains', or the whole text equals one of 'exact' (case-insensitive).",
+    "Order: ignore -> toner -> paper -> critical -> warning -> other.",
+    "Toner/paper messages that ALSO match 'critical' (e.g. 'Empty: yellow toner') are shown in red,",
+    "but are still logged as toner/paper so replacements and refills are counted."
+  ],
+
+  "ignore": {
+    "codes": ["10033", "10003"],
+    "exact": [
+      "Energisparemodus", "Energy saver mode", "Energy Saver Mode",
+      "Hvilemodus", "Sleep mode", "Low power mode",
+      "Utskrift pågår", "Printing", "Skriver ut",
+      "Kopiering pågår", "Copying",
+      "Klar", "Ready",
+      "Venter", "Waiting",
+      "Oppvarming", "Warming up"
+    ]
+  },
+
+  "toner": {
+    "contains": ["toner", "skriverkassett", "print cartridge"],
+    "codes": ["10072", "10073", "10074", "10075"]
+  },
+
+  "paper": {
+    "contains": ["Tomt for papir", "Tom for papir", "Out of paper", "Fyll på papir", "Load paper"],
+    "codes": ["13200", "13300", "13400"]
+  },
+
+  "critical": {
+    "starts": ["Tom:", "Empty:"],
+    "contains": [
+      "Error fetching errors",
+      "Papirstopp", "Paper jam", "Paper misfeed",
+      "Deksel åpent", "Cover open",
+      "Replace",
+      "Trenger flere stifter", "Add staples",
+      "Funksjonsproblem", "Functional problem",
+      "Ring service", "Call service",
+      "Reduser"
+    ],
+    "codes": [
+      "40440", "40132", "40133", "40134", "40135",
+      "40010", "40011", "40012", "40013", "40014", "40015",
+      "40300", "40341", "40490", "40800", "40540", "40100", "40241",
+      "340101"
+    ]
+  },
+
+  "warning": {
+    "contains": [
+      "Nesten", "Almost",
+      "Forbred", "Forbereder", "Preparing",
+      "Finner ikke:", "Not found:",
+      "Lavt niv", "Low level"
+    ],
+    "codes": ["10032", "30609", "30427", "30722", "30743", "42000", "42001", "42009"]
+  }
+}

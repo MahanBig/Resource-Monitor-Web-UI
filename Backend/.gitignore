@@ -1,2 +1,6 @@
 /credentials.json
+/config.json
 /printer_data.json
+/Printers.pkl
+/.venv/
+__pycache__/

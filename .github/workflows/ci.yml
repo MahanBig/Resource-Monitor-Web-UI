@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r Backend/requirements.txt
+      - run: python -m unittest discover -s Backend/tests -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test tests/*.test.mjs
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+      - run: for f in $(git ls-files '*.php'); do php -l "$f" || exit 1; done
+      - run: php tests/classification.test.php
+      - name: Validate JSON
+        run: for f in Frontend/error_rules.json Frontend/config.json Frontend/manifest.webmanifest Frontend/demo/printer_data.json; do python3 -m json.tool "$f" > /dev/null || exit 1; done
