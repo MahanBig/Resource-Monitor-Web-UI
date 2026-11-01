@@ -41,9 +41,11 @@ const state = {
   demo: isTruthyFlag(params.get("demo")),
   hideConsumables: isTruthyFlag(params.get("ignoreconsumables")),
   summaryOnly: params.get("view") === "summary",
+  // ?kiosk=1 – only the printers that need attention, large, nothing else (wall screens/TVs)
+  kiosk: isTruthyFlag(params.get("kiosk")),
   view: "attention", // "attention" | "all"
   statusFilter: null, // null | "critical" | "warning" | "ok" | "service"
-  search: storage.get("rm_search") || "",
+  search: isTruthyFlag(params.get("kiosk")) ? "" : storage.get("rm_search") || "",
   raw: null,
   printers: [],
   lastSuccess: null,
@@ -244,6 +246,11 @@ function updateLiveStatus() {
 
   el.live.dataset.mode = mode;
   el.liveText.textContent = text;
+  if (state.kiosk) {
+    const bar = $("#kioskBar");
+    bar.dataset.mode = mode;
+    $("#kioskText").textContent = `${state.config.title || t("app.title")} · ${text}`;
+  }
   el.banner.hidden = mode !== "error";
   el.banner.dataset.mode = mode;
   el.banner.textContent = mode === "ok" ? "" : text;
@@ -368,6 +375,11 @@ function render() {
   if (key !== state.renderKey) {
     state.renderKey = key;
     el.grid.innerHTML = printers.map(printerCard).join("");
+    if (state.kiosk) {
+      // Fill a landscape screen: 1 card = 1 column, 2–4 = 2, 5–9 = 3, more = 4.
+      const n = printers.length;
+      document.body.style.setProperty("--kiosk-cols", String(n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4));
+    }
     const alerts = alertsHtml(sortPrinters(state.printers));
     el.alertsList.innerHTML = alerts;
     el.alerts.hidden = !alerts;
@@ -487,6 +499,36 @@ async function showView(view, push = true) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Kiosk mode (?kiosk=1)
+ * ------------------------------------------------------------------------- */
+
+function startKiosk() {
+  document.body.classList.add("kiosk");
+  state.view = "attention";
+  state.statusFilter = null;
+  $("#kioskBar").hidden = false;
+
+  // When there are more problem printers than fit on the screen, scroll slowly
+  // down, pause, and jump back to the top – so every card is seen.
+  let direction = 1;
+  let pauseUntil = Date.now() + 8000;
+  setInterval(() => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    if (max <= 4 || Date.now() < pauseUntil) return;
+    if (direction > 0 && scrollY >= max - 1) {
+      direction = -1;
+      pauseUntil = Date.now() + 8000;
+    } else if (direction < 0) {
+      scrollTo({ top: 0, behavior: "smooth" });
+      direction = 1;
+      pauseUntil = Date.now() + 10000;
+    } else {
+      scrollBy(0, 1);
+    }
+  }, 40);
+}
+
+/* ---------------------------------------------------------------------------
  * PWA install button
  * ------------------------------------------------------------------------- */
 
@@ -514,6 +556,7 @@ function initInstall() {
 async function main() {
   await loadConfig();
   if (state.summaryOnly) document.body.classList.add("summary-only");
+  if (state.kiosk) startKiosk();
   // Only same-site relative image paths are accepted for the logo.
   if (state.config.logo && /^[\w./-]+\.(png|jpe?g|svg|webp|gif)$/i.test(state.config.logo) && !state.config.logo.startsWith("//")) {
     el.logo.src = state.config.logo;
