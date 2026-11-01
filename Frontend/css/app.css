@@ -424,3 +424,68 @@ body.summary-only .alerts { gap: 28px; }
   border: 1.5px solid currentColor;
   background: linear-gradient(90deg, currentColor 50%, transparent 50%);
 }
+
+/* ==========================================================================
+   Kiosk mode (?kiosk=1): only the printers that need attention, big,
+   for a TV or wall screen. Everything else is hidden.
+   ========================================================================== */
+body.kiosk { cursor: none; font-size: clamp(16px, 0.55vw + 10px, 26px); }
+body.kiosk .topbar,
+body.kiosk .tiles,
+body.kiosk .filters,
+body.kiosk .banner,
+body.kiosk .alerts-panel,
+body.kiosk .footer,
+body.kiosk .details-toggle,
+body.kiosk .details,
+body.kiosk .no-match { display: none !important; }
+body.kiosk .page { max-width: none; padding: 3vh 3vw 8vh; }
+body.kiosk .layout { grid-template-columns: minmax(0, 1fr) !important; }
+/* Column count is set by app.js from the number of cards (--kiosk-cols). */
+body.kiosk .printer-grid {
+  grid-template-columns: repeat(var(--kiosk-cols, 3), minmax(0, 1fr));
+  gap: 2vw;
+  margin: 0 auto;
+  max-width: calc(var(--kiosk-cols, 3) * 46em);
+}
+@media (orientation: portrait) {
+  body.kiosk .printer-grid { grid-template-columns: repeat(min(var(--kiosk-cols, 3), 2), minmax(0, 1fr)); }
+}
+body.kiosk .msg span::before { width: 0.3em; height: 0.3em; }
+/* More columns (?kiosk=all with many printers): shrink everything proportionally. */
+body.kiosk[data-kiosk-cols="4"] { font-size: clamp(13px, 0.42vw + 8px, 21px); }
+body.kiosk[data-kiosk-cols="5"] { font-size: clamp(12px, 0.34vw + 7px, 18px); }
+body.kiosk[data-kiosk-cols="6"] { font-size: clamp(11px, 0.28vw + 6px, 16px); }
+body.kiosk[data-kiosk-cols="5"] .printer-grid,
+body.kiosk[data-kiosk-cols="6"] .printer-grid { gap: 1.2vw; }
+/* In "all" mode, healthy printers step back so problems stand out. */
+body.kiosk-all .printer.status-ok:not(.has-service) { opacity: 0.72; }
+body.kiosk .printer { padding: 1.6em; gap: 1.1em; border-radius: 1.4em; font-size: 1em; }
+body.kiosk .printer-head { grid-template-columns: 4.5em minmax(0, 1fr) auto; }
+body.kiosk .printer-photo { width: 4.5em; height: 4.5em; }
+body.kiosk .printer-title h3 { font-size: 1.6em; }
+body.kiosk .printer-model { font-size: 0.95em; }
+body.kiosk .status-pill { font-size: 1em; }
+body.kiosk .status-pill::before { width: 0.6em; height: 0.6em; }
+body.kiosk .msg { font-size: 1.35em; }
+body.kiosk .offline-note { font-size: 1.2em; }
+body.kiosk .toner-meta { font-size: 0.85em; }
+body.kiosk .toner-meta span:last-child { font-size: 1.15em; }
+body.kiosk .toner-track { height: 0.3em; }
+body.kiosk .trays { font-size: 1em; }
+body.kiosk .service-box { font-size: 1em; }
+body.kiosk .empty-state { min-height: 80vh; display: grid; place-content: center; }
+body.kiosk .empty-state h2 { font-size: 3.5em; }
+body.kiosk .empty-state p { font-size: 1.3em; }
+
+.kiosk-bar {
+  position: fixed; right: 1.2em; bottom: 1em; z-index: 20;
+  display: flex; align-items: center; gap: 0.6em;
+  padding: 0.35em 0.9em; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--line);
+  font-size: 0.8em; color: var(--muted);
+}
+.kiosk-bar[data-mode="stale"] { color: var(--warning); }
+.kiosk-bar[data-mode="error"] { color: var(--critical); font-size: 1.1em; }
+.kiosk-bar[data-mode="stale"] .live-dot { background: var(--warning); animation: none; }
+.kiosk-bar[data-mode="error"] .live-dot { background: var(--critical); animation: none; }
