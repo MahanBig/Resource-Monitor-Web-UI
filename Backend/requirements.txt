@@ -1,2 +1,2 @@
 puresnmp==2.0.2
-paramiko>=3.4,<6
+paramiko>=5.1.0,<6
