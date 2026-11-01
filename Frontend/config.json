@@ -1,0 +1,11 @@
+{
+  "title": "",
+  "logo": "",
+  "dataUrl": "printer_data.json",
+  "apiUrl": "api/",
+  "pollSeconds": 8,
+  "staleAfterMinutes": 5,
+  "lowPaperSheets": 55,
+  "defaultLanguage": "auto",
+  "defaultView": "attention"
+}

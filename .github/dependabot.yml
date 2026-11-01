@@ -1,0 +1,16 @@
+# Weekly pull requests when a dependency (Python packages, Docker images,
+# GitHub Actions) gets an update, including security fixes.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /Backend
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /Backend
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /Frontend
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

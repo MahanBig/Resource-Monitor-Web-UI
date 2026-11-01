@@ -1,0 +1,26 @@
+# systemd unit for the SNMP poller (Raspberry Pi / Linux server).
+#
+#   sudo cp deploy/resource-monitor.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now resource-monitor
+#   journalctl -u resource-monitor -f        # follow the log
+#
+# Adjust User and the paths below to where you cloned the repository.
+
+[Unit]
+Description=Resource Monitor printer poller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Resource-Monitor-Web-UI/Backend
+ExecStart=/home/pi/Resource-Monitor-Web-UI/Backend/.venv/bin/python RicohReader.py run
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

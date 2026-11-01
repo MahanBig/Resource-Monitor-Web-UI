@@ -1,0 +1,77 @@
+# One-command deployment: database + website + SNMP poller.
+#
+#   cp .env.example .env            # fill in passwords
+#   cp Backend/Printers.example.json Backend/Printers.json   # list your printers
+#   docker compose up -d --build
+#
+# Then open http://<server>:8080  (admin: http://<server>:8080/admin/)
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    # Not published to the host: only the web container can reach the database.
+    environment:
+      MARIADB_DATABASE: resource_monitor
+      MARIADB_USER: resource_monitor
+      MARIADB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      retries: 10
+
+  web:
+    build: ./Frontend
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: resource_monitor
+      DB_USER: resource_monitor
+      DB_PASS: ${DB_PASSWORD}
+      LOGGER_KEY: ${LOGGER_KEY:?set LOGGER_KEY in .env}
+      APP_TIMEZONE: ${TIMEZONE:-Europe/Oslo}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+    volumes:
+      - data:/data:ro
+      # Optional: customise the site title/logo/poll interval without rebuilding.
+      # - ./Frontend/config.json:/var/www/html/config.json:ro
+
+  backend:
+    build: ./Backend
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    depends_on:
+      - web
+    # SNMP to printers on the local network works best with host networking on Linux.
+    # If you use it, change RM_LOGGER_URL below to http://localhost:${WEB_PORT:-8080}/api/process-printers.php
+    # network_mode: host
+    environment:
+      TZ: ${TIMEZONE:-Europe/Oslo}
+      RM_PRINTERS_FILE: /config/Printers.json
+      RM_OUTPUT_FILE: /data/printer_data.json
+      RM_SNMP_COMMUNITY: ${SNMP_COMMUNITY:-public}
+      RM_INTERVAL: ${POLL_INTERVAL:-40}
+      RM_SFTP_ENABLED: "false"
+      RM_LOGGER_URL: http://web/api/process-printers.php
+      RM_LOGGER_KEY: ${LOGGER_KEY}
+    volumes:
+      - ./Backend/Printers.json:/config/Printers.json:ro
+      - data:/data
+
+volumes:
+  db:
+  data:

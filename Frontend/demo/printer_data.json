@@ -1,0 +1,687 @@
+[
+  {
+    "IP": "192.0.2.10",
+    "Name": "Library",
+    "Serial": "3100R800101",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Timestamp": "2026-11-01T09:41:00+01:00",
+    "Online": true,
+    "Model": "IM C3000",
+    "DetectedSerial": "3100R800101",
+    "Ink Levels": [
+      "62%",
+      "100%",
+      "40%",
+      "55%",
+      "71%"
+    ],
+    "Supplies": [
+      {
+        "index": 0,
+        "name": "Black Toner",
+        "color": "black",
+        "level": 62,
+        "max": 100,
+        "percent": 62
+      },
+      {
+        "index": 1,
+        "name": "Waste Toner",
+        "color": "waste",
+        "level": 100,
+        "max": 100,
+        "percent": 100
+      },
+      {
+        "index": 2,
+        "name": "Cyan Toner",
+        "color": "cyan",
+        "level": 40,
+        "max": 100,
+        "percent": 40
+      },
+      {
+        "index": 3,
+        "name": "Magenta Toner",
+        "color": "magenta",
+        "level": 55,
+        "max": 100,
+        "percent": 55
+      },
+      {
+        "index": 4,
+        "name": "Yellow Toner",
+        "color": "yellow",
+        "level": 71,
+        "max": 100,
+        "percent": 71
+      }
+    ],
+    "Tray Information": [
+      "420",
+      "380",
+      "-3"
+    ],
+    "Trays": [
+      {
+        "index": 0,
+        "name": "Tray 1",
+        "level": 420,
+        "max": 500
+      },
+      {
+        "index": 1,
+        "name": "Tray 2",
+        "level": 380,
+        "max": 500
+      },
+      {
+        "index": 2,
+        "name": "Bypass Tray",
+        "level": -3,
+        "max": 100
+      }
+    ],
+    "Errors": [
+      "Papirstopp {40132}",
+      "Energisparemodus {10033}"
+    ]
+  },
+  {
+    "IP": "192.0.2.11",
+    "Name": "Office 2nd floor",
+    "Serial": "3100R800102",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Timestamp": "2026-11-01T09:41:00+01:00",
+    "Online": true,
+    "Model": "IM C5510",
+    "DetectedSerial": "3100R800102",
+    "Ink Levels": [
+      "3%",
+      "100%",
+      "80%",
+      "77%",
+      "64%"
+    ],
+    "Supplies": [
+      {
+        "index": 0,
+        "name": "Black Toner",
+        "color": "black",
+        "level": 3,
+        "max": 100,
+        "percent": 3
+      },
+      {
+        "index": 1,
+        "name": "Waste Toner",
+        "color": "waste",
+        "level": 100,
+        "max": 100,
+        "percent": 100
+      },
+      {
+        "index": 2,
+        "name": "Cyan Toner",
+        "color": "cyan",
+        "level": 80,
+        "max": 100,
+        "percent": 80
+      },
+      {
+        "index": 3,
+        "name": "Magenta Toner",
+        "color": "magenta",
+        "level": 77,
+        "max": 100,
+        "percent": 77
+      },
+      {
+        "index": 4,
+        "name": "Yellow Toner",
+        "color": "yellow",
+        "level": 64,
+        "max": 100,
+        "percent": 64
+      }
+    ],
+    "Tray Information": [
+      "0",
+      "500",
+      "312",
+      "-3"
+    ],
+    "Trays": [
+      {
+        "index": 0,
+        "name": "Tray 1",
+        "level": 0,
+        "max": 500
+      },
+      {
+        "index": 1,
+        "name": "Tray 2",
+        "level": 500,
+        "max": 500
+      },
+      {
+        "index": 2,
+        "name": "Tray 3",
+        "level": 312,
+        "max": 500
+      },
+      {
+        "index": 3,
+        "name": "Bypass Tray",
+        "level": -3,
+        "max": 100
+      }
+    ],
+    "Errors": [
+      "Nesten tom: sort toner {10072}",
+      "Tomt for papir: magasin 1 {13400}"
+    ]
+  },
+  {
+    "IP": "192.0.2.12",
+    "Name": "Teachers' room",
+    "Serial": "3100R800103",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Timestamp": "2026-11-01T09:41:00+01:00",
+    "Online": true,
+    "Model": "IM C300",
+    "DetectedSerial": "3100R800103",
+    "Ink Levels": [
+      "88%",
+      "100%",
+      "0%",
+      "45%",
+      "90%"
+    ],
+    "Supplies": [
+      {
+        "index": 0,
+        "name": "Black Toner",
+        "color": "black",
+        "level": 88,
+        "max": 100,
+        "percent": 88
+      },
+      {
+        "index": 1,
+        "name": "Waste Toner",
+        "color": "waste",
+        "level": 100,
+        "max": 100,
+        "percent": 100
+      },
+      {
+        "index": 2,
+        "name": "Cyan Toner",
+        "color": "cyan",
+        "level": 0,
+        "max": 100,
+        "percent": 0
+      },
+      {
+        "index": 3,
+        "name": "Magenta Toner",
+        "color": "magenta",
+        "level": 45,
+        "max": 100,
+        "percent": 45
+      },
+      {
+        "index": 4,
+        "name": "Yellow Toner",
+        "color": "yellow",
+        "level": 90,
+        "max": 100,
+        "percent": 90
+      }
+    ],
+    "Tray Information": [
+      "250",
+      "-3"
+    ],
+    "Trays": [
+      {
+        "index": 0,
+        "name": "Tray 1",
+        "level": 250,
+        "max": 500
+      },
+      {
+        "index": 1,
+        "name": "Bypass Tray",
+        "level": -3,
+        "max": 100
+      }
+    ],
+    "Errors": [
+      "Tom: cyan toner",
+      "Deksel åpent {40010}"
+    ]
+  },
+  {
+    "IP": "192.0.2.13",
+    "Name": "Reception",
+    "Serial": "3100R800104",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Timestamp": "2026-11-01T09:41:00+01:00",
+    "Online": true,
+    "Model": "IM C3010",
+    "DetectedSerial": "3100R800104",
+    "Ink Levels": [
+      "54%",
+      "100%",
+      "61%",
+      "70%",
+      "58%"
+    ],
+    "Supplies": [
+      {
+        "index": 0,
+        "name": "Black Toner",
+        "color": "black",
+        "level": 54,
+        "max": 100,
+        "percent": 54
+      },
+      {
+        "index": 1,
+        "name": "Waste Toner",
+        "color": "waste",
+        "level": 100,
+        "max": 100,
+        "percent": 100
+      },
+      {
+        "index": 2,
+        "name": "Cyan Toner",
+        "color": "cyan",
+        "level": 61,
+        "max": 100,
+        "percent": 61
+      },
+      {
+        "index": 3,
+        "name": "Magenta Toner",
+        "color": "magenta",
+        "level": 70,
+        "max": 100,
+        "percent": 70
+      },
+      {
+        "index": 4,
+        "name": "Yellow Toner",
+        "color": "yellow",
+        "level": 58,
+        "max": 100,
+        "percent": 58
+      }
+    ],
+    "Tray Information": [
+      "-3",
+      "-3",
+      "40",
+      "-3"
+    ],
+    "Trays": [
+      {
+        "index": 0,
+        "name": "Tray 1",
+        "level": -3,
+        "max": 500
+      },
+      {
+        "index": 1,
+        "name": "Tray 2",
+        "level": -3,
+        "max": 500
+      },
+      {
+        "index": 2,
+        "name": "Tray 3",
+        "level": 40,
+        "max": 500
+      },
+      {
+        "index": 3,
+        "name": "Bypass Tray",
+        "level": -3,
+        "max": 100
+      }
+    ],
+    "Errors": [
+      "Energy saver mode"
+    ]
+  },
+  {
+    "IP": "192.0.2.14",
+    "Name": "A-wing",
+    "Serial": "3100R800105",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Timestamp": "2026-11-01T09:41:00+01:00",
+    "Online": true,
+    "Model": "IM C5500",
+    "DetectedSerial": "3100R800105",
+    "Ink Levels": [
+      "91%",
+      "100%",
+      "93%",
+      "95%",
+      "97%"
+    ],
+    "Supplies": [
+      {
+        "index": 0,
+        "name": "Black Toner",
+        "color": "black",
+        "level": 91,
+        "max": 100,
+        "percent": 91
+      },
+      {
+        "index": 1,
+        "name": "Waste Toner",
+        "color": "waste",
+        "level": 100,
+        "max": 100,
+        "percent": 100
+      },
+      {
+        "index": 2,
+        "name": "Cyan Toner",
+        "color": "cyan",
+        "level": 93,
+        "max": 100,
+        "percent": 93
+      },
+      {
+        "index": 3,
+        "name": "Magenta Toner",
+        "color": "magenta",
+        "level": 95,
+        "max": 100,
+        "percent": 95
+      },
+      {
+        "index": 4,
+        "name": "Yellow Toner",
+        "color": "yellow",
+        "level": 97,
+        "max": 100,
+        "percent": 97
+      }
+    ],
+    "Tray Information": [
+      "480",
+      "500",
+      "-3"
+    ],
+    "Trays": [
+      {
+        "index": 0,
+        "name": "Tray 1",
+        "level": 480,
+        "max": 500
+      },
+      {
+        "index": 1,
+        "name": "Tray 2",
+        "level": 500,
+        "max": 500
+      },
+      {
+        "index": 2,
+        "name": "Bypass Tray",
+        "level": -3,
+        "max": 100
+      }
+    ],
+    "Errors": []
+  },
+  {
+    "IP": "192.0.2.15",
+    "Name": "B-wing",
+    "Serial": "",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Timestamp": "2026-11-01T09:41:00+01:00",
+    "Online": false,
+    "Model": "Error fetching model",
+    "Ink Levels": [
+      "Error fetching ink levels"
+    ],
+    "Supplies": [],
+    "Tray Information": [
+      "Error fetching tray information"
+    ],
+    "Trays": [],
+    "Errors": [
+      "Error fetching errors"
+    ]
+  },
+  {
+    "IP": "192.0.2.16",
+    "Name": "Print room",
+    "Serial": "3100R800107",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Timestamp": "2026-11-01T09:41:00+01:00",
+    "Online": true,
+    "Model": "c6503",
+    "DetectedSerial": "3100R800107",
+    "Ink Levels": [
+      "45%",
+      "100%",
+      "12%",
+      "33%",
+      "50%"
+    ],
+    "Supplies": [
+      {
+        "index": 0,
+        "name": "Black Toner",
+        "color": "black",
+        "level": 45,
+        "max": 100,
+        "percent": 45
+      },
+      {
+        "index": 1,
+        "name": "Waste Toner",
+        "color": "waste",
+        "level": 100,
+        "max": 100,
+        "percent": 100
+      },
+      {
+        "index": 2,
+        "name": "Cyan Toner",
+        "color": "cyan",
+        "level": 12,
+        "max": 100,
+        "percent": 12
+      },
+      {
+        "index": 3,
+        "name": "Magenta Toner",
+        "color": "magenta",
+        "level": 33,
+        "max": 100,
+        "percent": 33
+      },
+      {
+        "index": 4,
+        "name": "Yellow Toner",
+        "color": "yellow",
+        "level": 50,
+        "max": 100,
+        "percent": 50
+      }
+    ],
+    "Tray Information": [
+      "300",
+      "300",
+      "300",
+      "-3"
+    ],
+    "Trays": [
+      {
+        "index": 0,
+        "name": "Tray 1",
+        "level": 300,
+        "max": 500
+      },
+      {
+        "index": 1,
+        "name": "Tray 2",
+        "level": 300,
+        "max": 500
+      },
+      {
+        "index": 2,
+        "name": "Tray 3",
+        "level": 300,
+        "max": 500
+      },
+      {
+        "index": 3,
+        "name": "Bypass Tray",
+        "level": -3,
+        "max": 100
+      }
+    ],
+    "Errors": [
+      "Almost empty: cyan toner",
+      "Preparing"
+    ]
+  },
+  {
+    "IP": "192.0.2.17",
+    "Name": "Admin",
+    "Serial": "3100R800108",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Timestamp": "2026-11-01T09:41:00+01:00",
+    "Online": true,
+    "Model": "IM C300",
+    "DetectedSerial": "3100R800108",
+    "Ink Levels": [
+      "70%",
+      "100%",
+      "66%",
+      "64%",
+      "60%"
+    ],
+    "Supplies": [
+      {
+        "index": 0,
+        "name": "Black Toner",
+        "color": "black",
+        "level": 70,
+        "max": 100,
+        "percent": 70
+      },
+      {
+        "index": 1,
+        "name": "Waste Toner",
+        "color": "waste",
+        "level": 100,
+        "max": 100,
+        "percent": 100
+      },
+      {
+        "index": 2,
+        "name": "Cyan Toner",
+        "color": "cyan",
+        "level": 66,
+        "max": 100,
+        "percent": 66
+      },
+      {
+        "index": 3,
+        "name": "Magenta Toner",
+        "color": "magenta",
+        "level": 64,
+        "max": 100,
+        "percent": 64
+      },
+      {
+        "index": 4,
+        "name": "Yellow Toner",
+        "color": "yellow",
+        "level": 60,
+        "max": 100,
+        "percent": 60
+      }
+    ],
+    "Tray Information": [
+      "150",
+      "-2",
+      "-3"
+    ],
+    "Trays": [
+      {
+        "index": 0,
+        "name": "Tray 1",
+        "level": 150,
+        "max": 500
+      },
+      {
+        "index": 1,
+        "name": "Tray 2",
+        "level": -2,
+        "max": 500
+      },
+      {
+        "index": 2,
+        "name": "Bypass Tray",
+        "level": -3,
+        "max": 100
+      }
+    ],
+    "Errors": [
+      "Not found: tray 2"
+    ]
+  },
+  {
+    "IP": "192.0.2.18",
+    "Name": "Old copier",
+    "Serial": "",
+    "EID": "",
+    "Default": true,
+    "Time": "01 11 2026, 09:41",
+    "Model": "c4500",
+    "Ink Levels": [
+      "35%",
+      "100%",
+      "48%",
+      "52%",
+      "9%"
+    ],
+    "Tray Information": [
+      "220",
+      "0",
+      "-3"
+    ],
+    "Errors": [
+      "Lavt niv: stifter"
+    ]
+  }
+]

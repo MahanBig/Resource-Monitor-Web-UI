@@ -1,0 +1,4 @@
+# Only the public endpoints may be requested directly.
+<FilesMatch "^(bootstrap\.php|config(\.example)?\.php|schema\.sql)$">
+    Require all denied
+</FilesMatch>

@@ -1,0 +1,16 @@
+[
+    {
+        "IP": "192.0.2.20",
+        "Name": "Office 1",
+        "Serial": "",
+        "EID": "",
+        "Default": true
+    },
+    {
+        "IP": "192.0.2.21",
+        "Name": "Library",
+        "Serial": "",
+        "EID": "",
+        "Default": true
+    }
+]

@@ -1,0 +1,3 @@
+<FilesMatch "^(auth|lang|config(\.example)?)\.php$">
+    Require all denied
+</FilesMatch>

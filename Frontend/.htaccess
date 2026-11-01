@@ -1,0 +1,21 @@
+# Security headers for Apache hosts (most shared web hosts). Other servers:
+# send the same headers from your server config.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set Cross-Origin-Opener-Policy "same-origin"
+    # Never cache the live data or the API.
+    <FilesMatch "^(printer_data\.json|config\.json|error_rules\.json)$">
+        Header set Cache-Control "no-store"
+    </FilesMatch>
+</IfModule>
+
+# No directory listings.
+Options -Indexes
+
+# Block hidden files, upload temp files, and build/deploy files.
+<FilesMatch "(^\.|\.uploading$|^Dockerfile$|\.(md|sql|bak|swp|orig)$)">
+    Require all denied
+</FilesMatch>
