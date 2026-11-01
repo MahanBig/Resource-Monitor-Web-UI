@@ -8,6 +8,13 @@ require __DIR__ . '/bootstrap.php';
  * Creates/upgrades the database tables on first call.
  */
 
+// Anyone may see whether the installation works; the details (versions,
+// counts, file ages) are only shown to callers that send the logger key:
+//   curl -H "X-Logger-Key: <key>" https://example.com/api/health.php
+$expectedKey = (string) (app_config()['logger_key'] ?? '');
+$providedKey = (string) (get_request_header('X-Logger-Key') ?? '');
+$detailed = strlen($expectedKey) >= 16 && strlen($providedKey) <= 512 && hash_equals($expectedKey, $providedKey);
+
 $checks = [
     'php_version' => PHP_VERSION,
     'pdo_mysql' => extension_loaded('pdo_mysql'),
@@ -30,6 +37,10 @@ try {
     $checks['rules'] = 'error: ' . $e->getMessage();
 }
 
+if (!$detailed) {
+    $checks = ['hint' => 'Send the X-Logger-Key header to see detailed checks.'];
+}
+
 if (!history_configured()) {
     json_response([
         'ok' => true,
@@ -43,6 +54,9 @@ if (!history_configured()) {
 try {
     $pdo = db();
     $checks['database'] = 'connected';
+    if (!$detailed) {
+        json_response(['ok' => true, 'version' => APP_VERSION, 'history' => true, 'checks' => $checks]);
+    }
     $checks['schema_version'] = (int) scalar_query($pdo, "SELECT v FROM app_meta WHERE k = 'schema_version'");
     $checks['incidents'] = (int) scalar_query($pdo, 'SELECT COUNT(*) FROM printer_incidents');
     $checks['active_errors'] = (int) scalar_query($pdo, 'SELECT COUNT(*) FROM printer_active_errors');

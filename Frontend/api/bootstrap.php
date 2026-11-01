@@ -229,7 +229,10 @@ function json_response(array $data, int $status = 200): never
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('X-Content-Type-Options: nosniff');
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    header('X-Frame-Options: DENY');
+    header('Referrer-Policy: no-referrer');
+    header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'");
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
     exit;
 }
 
@@ -259,6 +262,9 @@ function require_logger_auth(): void
     $expected = (string) (app_config()['logger_key'] ?? '');
     $provided = get_request_header('X-Logger-Key') ?? '';
 
+    if (strlen($provided) > 512) {
+        fail_json('Invalid logger key.', 401);
+    }
     if (strlen($expected) < 16) {
         fail_json('logger_key is not configured (or shorter than 16 characters).', 503);
     }
@@ -313,7 +319,7 @@ function parse_error_string(string $raw): array
     return [
         'raw' => $raw,
         'message' => $message,
-        'code' => $code,
+        'code' => truncate_text($code, 64),
         'normalized_message' => normalize_text($message),
     ];
 }
@@ -390,7 +396,7 @@ function detect_toner_color(array $parsed): ?string
 function detect_paper_tray(array $parsed): ?string
 {
     if (preg_match('/(?:magasin|tray|fack|kassette|fach)\s*([0-9]+)/iu', (string) ($parsed['message'] ?? ''), $m)) {
-        return (string) $m[1];
+        return substr((string) $m[1], 0, 8);
     }
     return null;
 }
@@ -437,42 +443,56 @@ function incident_fingerprint(array $parsed, ?string $category = null, ?string $
     return hash('sha256', ($parsed['normalized_message'] ?? '') . '|' . ($parsed['code'] ?? ''));
 }
 
-/** Same algorithm as printerId() in js/app.js. */
+/** Converts untrusted JSON values to text without warnings for arrays/objects. */
+function scalar_text(mixed $value): string
+{
+    return is_scalar($value) ? (string) $value : '';
+}
+
+/** Same algorithm as printerId() in js/printers.js. */
 function printer_identifier(array $printer): string
 {
-    $serial = trim((string) ($printer['Serial'] ?? ''));
+    $serial = trim(scalar_text($printer['Serial'] ?? ''));
     if ($serial !== '') {
-        return 'serial:' . $serial;
+        return truncate_text('serial:' . $serial, 160);
     }
-    $ip = trim((string) ($printer['IP'] ?? ''));
+    $ip = trim(scalar_text($printer['IP'] ?? ''));
     if ($ip !== '') {
-        return 'ip:' . $ip;
+        return truncate_text('ip:' . $ip, 160);
     }
-    return 'name:' . trim((string) ($printer['Name'] ?? 'unknown'));
+    return truncate_text('name:' . trim(scalar_text($printer['Name'] ?? 'unknown')), 160);
 }
 
 function snapshot_time(array $printer): string
 {
     $tz = app_timezone();
+    $now = new DateTimeImmutable('now', $tz);
 
-    $iso = trim((string) ($printer['Timestamp'] ?? ''));
+    // Ignore timestamps that are clearly wrong (bad clock or malformed data).
+    $plausible = static fn (DateTimeImmutable $d): bool =>
+        $d > $now->modify('-30 days') && $d < $now->modify('+1 day');
+
+    $iso = trim(scalar_text($printer['Timestamp'] ?? ''));
     if ($iso !== '') {
         try {
-            return (new DateTimeImmutable($iso))->setTimezone($tz)->format('Y-m-d H:i:s');
+            $date = (new DateTimeImmutable($iso))->setTimezone($tz);
+            if ($plausible($date)) {
+                return $date->format('Y-m-d H:i:s');
+            }
         } catch (Throwable) {
             // fall back to the legacy field
         }
     }
 
-    $raw = trim((string) ($printer['Time'] ?? ''));
+    $raw = trim(scalar_text($printer['Time'] ?? ''));
     if ($raw !== '') {
         $date = DateTimeImmutable::createFromFormat('d m Y, H:i', $raw, $tz);
-        if ($date instanceof DateTimeImmutable) {
+        if ($date instanceof DateTimeImmutable && $plausible($date)) {
             return $date->format('Y-m-d H:i:s');
         }
     }
 
-    return (new DateTimeImmutable('now', $tz))->format('Y-m-d H:i:s');
+    return $now->format('Y-m-d H:i:s');
 }
 
 function seconds_between(string $from, string $to): int

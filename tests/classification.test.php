@@ -16,6 +16,7 @@ foreach ($cases as $case) {
     }
 }
 
+$recent = (new DateTimeImmutable('-1 hour', app_timezone()))->setTime((int) date('H', time() - 3600), (int) date('i', time() - 3600));
 $checks = [
     [detect_toner_color(parse_error_string('Nesten tom: sort toner')), 'black'],
     [detect_toner_color(parse_error_string('Toner low {10074}')), 'magenta'],
@@ -25,8 +26,12 @@ $checks = [
     [toner_level_for_color(['Ink Levels' => ['40%', '100%', '-3%', '20%', '9%']], 'yellow'), 9],
     [toner_level_for_color(['Ink Levels' => ['40%', '100%', '-3%']], 'cyan'), null],
     [toner_level_for_color(['Supplies' => [['color' => 'cyan', 'percent' => 77]]], 'cyan'), 77],
-    [snapshot_time(['Timestamp' => '2026-11-01T09:41:00+01:00']), '2026-11-01 09:41:00'],
-    [snapshot_time(['Time' => '01 11 2026, 09:41']), '2026-11-01 09:41:00'],
+    [snapshot_time(['Timestamp' => $recent->format(DATE_ATOM)]), $recent->format('Y-m-d H:i:s')],
+    [snapshot_time(['Time' => $recent->format('d m Y, H:i')]), $recent->format('Y-m-d H:i:00')],
+    // Implausible timestamps fall back to "now"
+    [abs(strtotime(snapshot_time(['Timestamp' => '2199-01-01T00:00:00Z'])) - time()) < 5, true],
+    [scalar_text(['nested']), ''],
+    [strlen(printer_identifier(['Name' => str_repeat('x', 500)])), 160],
 ];
 foreach ($checks as $i => [$actual, $expected]) {
     if ($actual !== $expected) {

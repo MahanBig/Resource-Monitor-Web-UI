@@ -10,6 +10,8 @@ services:
   db:
     image: mariadb:11
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    # Not published to the host: only the web container can reach the database.
     environment:
       MARIADB_DATABASE: resource_monitor
       MARIADB_USER: resource_monitor
@@ -25,6 +27,7 @@ services:
   web:
     build: ./Frontend
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
     depends_on:
       db:
         condition: service_healthy
@@ -47,6 +50,10 @@ services:
   backend:
     build: ./Backend
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
     depends_on:
       - web
     # SNMP to printers on the local network works best with host networking on Linux.

@@ -63,3 +63,21 @@ test("demo data builds and offline printers are critical", () => {
   const hidden = buildPrinter(demo[1], { rules, hideConsumables: true });
   assert.equal(hidden.messages.length, 0);
 });
+
+test("untrusted snapshot values are sanitised", async () => {
+  const { safeHost } = await import("../Frontend/js/printers.js");
+  assert.equal(safeHost("192.168.1.20"), "192.168.1.20");
+  assert.equal(safeHost("javascript:alert(1)"), "");
+  assert.equal(safeHost('a" onmouseover="x'), "");
+  const evil = buildPrinter({
+    IP: "x", Name: "<img src=x onerror=alert(1)>",
+    Supplies: [{ color: "red;background:url(x)", percent: "50%;x", level: "y", name: { a: 1 } }],
+    Trays: [{ name: 5, level: "1;x", max: {} }],
+    Errors: ["<script>alert(1)</script>"],
+  }, { rules });
+  assert.equal(evil.supplies[0].color, "unknown");
+  assert.equal(evil.supplies[0].percent, null);
+  assert.equal(evil.supplies[0].label, "");
+  assert.equal(evil.trays[0].level, null);
+  assert.equal(evil.trays[0].name, "");
+});

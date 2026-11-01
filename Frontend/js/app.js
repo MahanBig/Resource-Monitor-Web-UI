@@ -322,7 +322,7 @@ function printerCard(p) {
       ${escapeHtml(t(expanded ? "card.hideDetails" : "card.details"))}<span aria-hidden="true">▾</span>
     </button>
     <dl class="details" ${expanded ? "" : "hidden"}>
-      <div><dt>${escapeHtml(t("card.ip"))}</dt><dd><a href="http://${escapeHtml(p.ip)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(t("card.openWeb"))}">${escapeHtml(p.ip)} ↗</a></dd></div>
+      <div><dt>${escapeHtml(t("card.ip"))}</dt><dd>${p.host ? `<a href="http://${escapeHtml(p.host)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(t("card.openWeb"))}">${escapeHtml(p.host)} ↗</a>` : escapeHtml(p.ip || "–")}</dd></div>
       <div><dt>${escapeHtml(t("card.serial"))}</dt><dd>${p.serial ? `<button type="button" class="copy" data-copy="${escapeHtml(p.serial)}" title="${escapeHtml(t("card.copy"))}">${escapeHtml(p.serial)}</button>` : "–"}</dd></div>
       <div><dt>${escapeHtml(t("card.updated"))}</dt><dd>${escapeHtml(p.updated ? formatDateTime(p.updated) : "–")}</dd></div>
     </dl>
@@ -514,7 +514,8 @@ function initInstall() {
 async function main() {
   await loadConfig();
   if (state.summaryOnly) document.body.classList.add("summary-only");
-  if (state.config.logo) {
+  // Only same-site relative image paths are accepted for the logo.
+  if (state.config.logo && /^[\w./-]+\.(png|jpe?g|svg|webp|gif)$/i.test(state.config.logo) && !state.config.logo.startsWith("//")) {
     el.logo.src = state.config.logo;
     el.logo.hidden = false;
   }

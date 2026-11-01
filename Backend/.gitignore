@@ -4,3 +4,4 @@
 /Printers.pkl
 /.venv/
 __pycache__/
+/known_hosts

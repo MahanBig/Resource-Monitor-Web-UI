@@ -42,6 +42,7 @@ import sys
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -95,7 +96,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "pass": "",
         "key_file": "",
         "path": "",
+        # false = trust on first use: the server key is saved to known_hosts
+        #         and the upload is refused if it ever changes.
+        # true  = only accept keys already in ~/.ssh/known_hosts.
         "verify_host_key": False,
+        "known_hosts_file": "known_hosts",
         "timeout": 15,
     },
     "logger": {
@@ -500,10 +505,19 @@ def upload_sftp(local_file: Path, settings: dict) -> None:
     import paramiko
 
     ssh = paramiko.SSHClient()
+    known_hosts = resolve_path(settings.get("known_hosts_file") or "known_hosts")
     if settings.get("verify_host_key"):
         ssh.load_system_host_keys()
         ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
     else:
+        # Trust on first use. A changed key raises BadHostKeyException
+        # (possible man-in-the-middle) instead of silently uploading.
+        if known_hosts.is_file():
+            ssh.load_host_keys(str(known_hosts))
+        else:
+            known_hosts.parent.mkdir(parents=True, exist_ok=True)
+            known_hosts.touch(mode=0o600)
+            ssh.load_host_keys(str(known_hosts))
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     connect_args: dict[str, Any] = {
@@ -519,6 +533,11 @@ def upload_sftp(local_file: Path, settings: dict) -> None:
 
     try:
         ssh.connect(**connect_args)
+        if not settings.get("verify_host_key"):
+            try:
+                ssh.save_host_keys(str(known_hosts))
+            except OSError as exc:
+                log.warning("Could not save %s: %s", known_hosts, exc)
         with ssh.open_sftp() as sftp:
             if settings.get("path"):
                 sftp.chdir(settings["path"])
@@ -544,6 +563,8 @@ def post_to_logger(snapshot: list[dict], settings: dict) -> dict | None:
     key = (settings.get("key") or "").strip()
     if not url or not key:
         return None
+    if urllib.parse.urlsplit(url).scheme not in {"http", "https"}:
+        raise RuntimeError("logger.url must start with https:// (or http:// for a local server)")
 
     request = urllib.request.Request(
         url,
@@ -574,6 +595,24 @@ def post_to_logger(snapshot: list[dict], settings: dict) -> dict | None:
         result.get("incidents_resolved", "?"),
     )
     return result
+
+
+def security_warnings(config: dict) -> list[str]:
+    """Problems worth logging once at start-up."""
+    warnings = []
+    url = str(config["logger"].get("url") or "")
+    if url.startswith("http://"):
+        host = urllib.parse.urlsplit(url).hostname or ""
+        if host not in {"localhost", "127.0.0.1", "::1", "web"} and "." in host:
+            warnings.append("logger.url uses plain http:// - the logger key is sent unencrypted. Use https://.")
+    if config["logger"].get("key") and len(str(config["logger"]["key"])) < 16:
+        warnings.append("logger.key is shorter than 16 characters; the website will refuse it.")
+    if os.name == "posix":
+        for name in ("config.json", "credentials.json"):
+            path = BASE_DIR / name
+            if path.is_file() and path.stat().st_mode & 0o077:
+                warnings.append(f"{path} is readable by other users and contains secrets. Run: chmod 600 {path}")
+    return warnings
 
 
 def poll_once(config: dict) -> list[dict]:
@@ -620,6 +659,9 @@ def cmd_run(config: dict, _args) -> int:
         if sig is not None:
             signal.signal(sig, handle_signal)
 
+    for warning in security_warnings(config):
+        log.warning("Security: %s", warning)
+
     interval = int(config["interval_seconds"])
     log.info("Resource Monitor %s started, polling every %ss (Ctrl+C to stop)", __version__, interval)
     while not stop["flag"]:
@@ -647,6 +689,8 @@ def cmd_once(config: dict, args) -> int:
 
 def cmd_check(config: dict, _args) -> int:
     print(json.dumps(redact(config), indent=2, ensure_ascii=False))
+    for warning in security_warnings(config):
+        print(f"WARNING: {warning}")
     path = resolve_path(config["printers_file"])
     printers = load_printers(path)
     print(f"\n{len(printers)} printer(s) in {path}")

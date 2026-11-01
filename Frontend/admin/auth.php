@@ -11,6 +11,22 @@ function admin_security_headers(): void
     header('Referrer-Policy: no-referrer');
     header("Content-Security-Policy: default-src 'self'; style-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Cross-Origin-Opener-Policy: same-origin');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+    if (admin_is_https()) {
+        header('Strict-Transport-Security: max-age=31536000');
+    }
+}
+
+/**
+ * HTTPS detection. X-Forwarded-Proto is honoured only to decide the Secure
+ * cookie flag / HSTS (spoofing it can only make the attacker's cookie stricter).
+ */
+function admin_is_https(): bool
+{
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443')
+        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 }
 
 function admin_config(): array
@@ -51,8 +67,12 @@ function admin_start_session(): void
     }
 
     $config = admin_config();
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443');
+    $secure = admin_is_https();
+
+    // Reject session IDs the server did not create (session fixation) and never put them in URLs.
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_trans_sid', '0');
 
     session_name((string) ($config['session_name'] ?? 'rm_admin'));
     session_set_cookie_params([
@@ -185,13 +205,23 @@ function admin_verify_credentials(string $username, string $password): bool
 {
     $config = admin_config();
     $expectedUser = (string) ($config['username'] ?? '');
-    $passwordConfig = $config['password'] ?? [];
 
-    if ($expectedUser === '' || !hash_equals($expectedUser, $username)) {
+    // Very long inputs are never legitimate and only cost CPU.
+    if (strlen($username) > 200 || strlen($password) > 1024) {
         return false;
     }
 
+    // The password is always checked, even for a wrong username, so response
+    // time does not reveal whether the username exists.
+    $passwordOk = admin_verify_password($password, $config);
+    $userOk = $expectedUser !== '' && hash_equals($expectedUser, $username);
+    return $userOk && $passwordOk;
+}
+
+function admin_verify_password(string $password, array $config): bool
+{
     $hashString = (string) ($config['password_hash'] ?? '');
+    $passwordConfig = $config['password'] ?? [];
 
     // "pbkdf2_sha256$<iterations>$<salt b64>$<hash b64>" (tools/hash-password.py)
     if (str_starts_with($hashString, 'pbkdf2_sha256$')) {
@@ -202,14 +232,16 @@ function admin_verify_credentials(string $username, string $password): bool
         $passwordConfig = ['iterations' => $parts[1], 'salt' => $parts[2], 'hash' => $parts[3]];
     } elseif ($hashString !== '') {
         // Native PHP hashes: php -r 'echo password_hash("secret", PASSWORD_DEFAULT);'
-        return password_verify($password, $hashString);
+        $info = password_get_info($hashString);
+        return ($info['algo'] ?? null) !== null && $info['algo'] !== 0 && password_verify($password, $hashString);
     }
 
     $iterations = (int) ($passwordConfig['iterations'] ?? 0);
     $salt = base64_decode((string) ($passwordConfig['salt'] ?? ''), true);
     $expectedHash = base64_decode((string) ($passwordConfig['hash'] ?? ''), true);
 
-    if ($iterations < 100000 || $salt === false || $expectedHash === false || strlen($expectedHash) !== 32) {
+    if ($iterations < 100000 || $iterations > 10000000 || $salt === false || strlen($salt) < 8
+        || $expectedHash === false || strlen($expectedHash) !== 32) {
         return false;
     }
 

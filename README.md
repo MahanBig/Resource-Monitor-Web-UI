@@ -211,6 +211,43 @@ php tests/classification.test.php
 
 Run the site locally with `php -S localhost:8000 -t Frontend` and open `http://localhost:8000/?demo=1`.
 
+## Security
+
+What is in place (and tested in CI / by hand against a live install):
+
+- **No XSS:** every value from printers, the database or config is HTML-escaped. A strict
+  Content-Security-Policy forbids inline and third-party scripts, so even a missed spot couldn't run code.
+- **No SQL injection:** all queries use bound parameters, and the only interpolated values are
+  whitelisted constants or integers.
+- **Logger endpoint:** needs the secret `X-Logger-Key` (constant-time compare, minimum 16 characters).
+  POST only, 5 MB body limit, at most 1000 printers per snapshot, and every value is type-checked
+  and cut to the database column size.
+- **Admin:** PBKDF2 (600 000 rounds) or bcrypt/argon2 passwords and CSRF tokens on every form.
+  Session cookies are HttpOnly, SameSite=Strict and Secure on HTTPS, with strict session mode and a new ID at login.
+  After 5 failed logins the IP is locked out for 15 minutes, and response time doesn't reveal whether a
+  username exists. Clickjacking protection and HSTS are on.
+- **API:** error messages never leak internals. `health.php` shows details only with the logger key.
+  `config.php`, `bootstrap.php` and hidden files are blocked by `.htaccess`.
+- **Backend:** SFTP server keys are pinned on first use (`Backend/known_hosts`), so a changed key
+  (possible man-in-the-middle) stops the upload. It warns if the logger key would be sent over plain
+  `http://` or if `config.json` is readable by other users. Legacy `.pkl` files are imported with a
+  restricted unpickler that can't run code.
+- **Docker:** the database is not exposed, the poller runs as a non-root, read-only container with no
+  capabilities, `no-new-privileges` is set everywhere, and PHP/Apache version banners are hidden.
+- **Dependabot** opens a pull request when a dependency gets a security fix.
+
+Things only you can do:
+
+- Serve the site over **HTTPS**, especially `/admin/` and the logger URL.
+- Use long random values for `LOGGER_KEY` and the database password, and a strong admin password.
+- `chmod 600 Backend/config.json` and keep `.env` / `config.php` out of git (already in `.gitignore`).
+- Remember that service notes and printer names/IPs are visible to anyone who can open the page.
+  Put the site behind your network or a login if that matters.
+- If you are behind a reverse proxy, all visitors share one IP for the login lockout, so an attacker
+  can lock the admin out for 15 minutes (but still can't guess the password).
+
+Found a problem? Please open a GitHub issue (or contact the maintainer privately for anything sensitive).
+
 ## Don't commit
 
 `.env`, `Backend/config.json`, `Backend/credentials.json`, `Frontend/api/config.php`,

@@ -11,7 +11,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 require_logger_auth();
 
 try {
-    $rawBody = trim((string) file_get_contents('php://input'));
+    // A snapshot is a few KB per printer; refuse absurd payloads early.
+    $maxBytes = 5 * 1024 * 1024;
+    if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > $maxBytes) {
+        fail_json('Request body too large.', 413);
+    }
+    $rawBody = (string) file_get_contents('php://input', false, null, 0, $maxBytes + 1);
+    if (strlen($rawBody) > $maxBytes) {
+        fail_json('Request body too large.', 413);
+    }
+    $rawBody = trim($rawBody);
 
     if ($rawBody !== '') {
         $printerData = json_decode($rawBody, true, 512, JSON_THROW_ON_ERROR);
@@ -24,8 +33,11 @@ try {
         $printerData = json_decode((string) file_get_contents($printerFile), true, 512, JSON_THROW_ON_ERROR);
     }
 
-    if (!is_array($printerData)) {
+    if (!is_array($printerData) || !array_is_list($printerData)) {
         fail_json('Expected a JSON array of printers.', 400);
+    }
+    if (count($printerData) > 1000) {
+        fail_json('Too many printers in one snapshot (max 1000).', 413);
     }
 
     $pdo = db();
@@ -138,9 +150,10 @@ try {
 
             $printersProcessed++;
             $printerId = printer_identifier($printer);
-            $printerName = trim((string) ($printer['Name'] ?? 'Unknown printer'));
-            $printerIp = trim((string) ($printer['IP'] ?? ''));
-            $printerModel = trim((string) ($printer['Model'] ?? ''));
+            // Values are bound as parameters (no SQL injection) and cut to the column sizes.
+            $printerName = truncate_text(trim(scalar_text($printer['Name'] ?? 'Unknown printer')), 160);
+            $printerIp = truncate_text(trim(scalar_text($printer['IP'] ?? '')), 64);
+            $printerModel = truncate_text(trim(scalar_text($printer['Model'] ?? '')), 160);
             $snapshotAt = snapshot_time($printer);
 
             $selectActive->execute([':printer_id' => $printerId]);
@@ -157,7 +170,7 @@ try {
 
             $errorsFieldValid = array_key_exists('Errors', $printer) && is_array($printer['Errors']);
             $resolutionTrusted = $errorsFieldValid;
-            $errors = $errorsFieldValid ? $printer['Errors'] : [];
+            $errors = $errorsFieldValid ? array_slice($printer['Errors'], 0, 200) : [];
 
             // Fingerprints actually observed in this snapshot. Older toner incidents may
             // carry a pre-v3 fingerprint; then the existing active fingerprint is reused.

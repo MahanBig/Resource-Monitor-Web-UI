@@ -93,6 +93,24 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(safe["logger"]["key"], "********")
 
 
+class SecurityTests(unittest.TestCase):
+    def base(self, url, key="x" * 20):
+        return {"logger": {"url": url, "key": key}}
+
+    def test_plain_http_logger_warns(self):
+        self.assertTrue(any("http://" in w for w in rr.security_warnings(self.base("http://example.com/api/process-printers.php"))))
+
+    def test_local_http_is_fine(self):
+        self.assertFalse(any("http://" in w for w in rr.security_warnings(self.base("http://web/api/process-printers.php"))))
+
+    def test_short_key_warns(self):
+        self.assertTrue(any("shorter" in w for w in rr.security_warnings(self.base("https://x.org/a", key="short"))))
+
+    def test_logger_rejects_other_schemes(self):
+        with self.assertRaises(RuntimeError):
+            rr.post_to_logger([], {"url": "file:///etc/passwd", "key": "k" * 20})
+
+
 class PrinterListTests(unittest.TestCase):
     def test_normalize_defaults(self):
         p = rr.normalize_printer({"IP": " 10.0.0.1 "})

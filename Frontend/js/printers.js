@@ -41,6 +41,11 @@ export function snapshotDate(printer) {
   return new Date(year, month - 1, day, hour, minute);
 }
 
+const finite = (value) => (typeof value === "number" && Number.isFinite(value) ? value : null);
+
+/** Only plain IPv4/IPv6/host names become links (no "javascript:" or paths). */
+export const safeHost = (value) => (/^[A-Za-z0-9.:[\]-]{1,253}$/.test(String(value ?? "")) ? String(value) : "");
+
 const toNumber = (value) => {
   const number = Number.parseFloat(String(value ?? "").replace("%", ""));
   return Number.isFinite(number) ? number : null;
@@ -49,12 +54,16 @@ const toNumber = (value) => {
 export function readSupplies(printer) {
   if (Array.isArray(printer.Supplies) && printer.Supplies.length) {
     const named = printer.Supplies.filter((s) => s.color && s.color !== "waste");
-    const list = (named.length ? named : printer.Supplies).map((s) => ({
-      color: s.color || "unknown",
-      label: s.name || "",
-      percent: s.percent ?? (s.level >= 0 ? Math.min(100, s.level) : null),
-      someRemaining: s.level === -3,
-    }));
+    const COLORS = ["black", "cyan", "magenta", "yellow", "waste"];
+    const list = (named.length ? named : printer.Supplies).map((s) => {
+      const percent = finite(s.percent) ?? (finite(s.level) !== null && s.level >= 0 ? s.level : null);
+      return {
+        color: COLORS.includes(s.color) ? s.color : "unknown",
+        label: typeof s.name === "string" ? s.name : "",
+        percent: percent === null ? null : Math.max(0, Math.min(100, percent)),
+        someRemaining: s.level === -3,
+      };
+    });
     return list.sort((a, b) => TONER_ORDER.indexOf(a.color) - TONER_ORDER.indexOf(b.color));
   }
 
@@ -80,7 +89,12 @@ const BYPASS = /bypass|manual|manuell|multi|universal/i;
 export function readTrays(printer, lowPaperSheets = 55) {
   let trays;
   if (Array.isArray(printer.Trays) && printer.Trays.length) {
-    trays = printer.Trays.map((tray, index) => ({ ...tray, number: index + 1 }));
+    trays = printer.Trays.map((tray, index) => ({
+      name: typeof tray.name === "string" ? tray.name : "",
+      level: finite(tray.level),
+      max: finite(tray.max),
+      number: index + 1,
+    }));
     const hasNames = trays.some((tray) => tray.name);
     trays = hasNames
       ? trays.filter((tray) => !BYPASS.test(tray.name || ""))
@@ -146,6 +160,7 @@ export function buildPrinter(raw, options = {}) {
     id: printerId(raw),
     name: String(raw.Name || raw.IP || "?"),
     ip: String(raw.IP || ""),
+    host: safeHost(raw.IP),
     serial: String(raw.Serial || raw.DetectedSerial || ""),
     model: raw.Model && raw.Model !== "Error fetching model" ? String(raw.Model) : "",
     image: modelImage(raw.Model),

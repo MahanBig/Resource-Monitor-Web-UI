@@ -26,6 +26,10 @@ function admin_redirect(): never
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
+    if (!in_array($action, ['login', 'logout', 'report_service', 'update_note', 'clear_service'], true)) {
+        http_response_code(400);
+        exit;
+    }
 
     if ($action === 'login') {
         admin_require_csrf();
@@ -68,7 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'report_service' || $action === 'update_note') {
-        $note = truncate_text(trim((string) ($_POST['service_note'] ?? '')), 500);
+        // Strip control characters; the note is shown publicly (escaped) on the status page.
+        $note = (string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', (string) ($_POST['service_note'] ?? ''));
+        $note = truncate_text(trim($note), 500);
 
         $stmt = $pdo->prepare(
             "UPDATE printer_incidents
