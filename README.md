@@ -14,7 +14,7 @@ and an optional PHP + MariaDB part adds history, statistics and service tracking
 
 ## Features
 
-- **Kiosk mode** (`?kiosk=1`): a full-screen view of only the printers with problems, made for a TV.
+- **Kiosk mode** for a TV: `?kiosk=1` shows only the printers with problems, `?kiosk=all` shows every printer.
 - **Live dashboard**: toner levels, paper trays and status messages for every printer. It refreshes every few seconds.
 - **Languages**: English, Norsk, Svenska and Deutsch. The interface **and the printer messages** are translated, so it does not matter which language the printer panels use. Your choice is remembered (or use `?lang=nb`).
 - **Light and dark mode**: follows the system setting, with a toggle in the header.
@@ -158,6 +158,7 @@ For example, model `IM C3000` uses `IM-C3000.png`. Unknown models show `missing.
 |---|---|
 | `?lang=nb` | Language (`en`, `nb`, `sv`, `de`). |
 | `?stats=1` | Open the statistics view. |
+| `?kiosk=all` | Kiosk mode showing **every** printer (problems first, healthy ones slightly dimmed). With many printers the cards shrink to fit up to 6 columns. |
 | `?kiosk=1` | **Kiosk mode for a TV or wall screen:** only the printers that need attention, as large cards filling the screen. No menus, buttons or mouse cursor. If there are more cards than fit, the page scrolls slowly through them. When everything is fine it shows a big "All printers are working". A small corner note shows the last update time and turns orange or red if data stops arriving. Combine with `&lang=nb`, `&darkmode=1` or `&ignoreconsumables=1`. |
 | `?view=all` / `?view=summary` | All printers / only a compact text list of alerts. |
 | `?darkmode=1` | Force dark mode. `?darkseason=1` uses dark mode in November to January. |

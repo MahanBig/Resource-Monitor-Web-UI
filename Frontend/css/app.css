@@ -452,6 +452,14 @@ body.kiosk .printer-grid {
   body.kiosk .printer-grid { grid-template-columns: repeat(min(var(--kiosk-cols, 3), 2), minmax(0, 1fr)); }
 }
 body.kiosk .msg span::before { width: 0.3em; height: 0.3em; }
+/* More columns (?kiosk=all with many printers): shrink everything proportionally. */
+body.kiosk[data-kiosk-cols="4"] { font-size: clamp(13px, 0.42vw + 8px, 21px); }
+body.kiosk[data-kiosk-cols="5"] { font-size: clamp(12px, 0.34vw + 7px, 18px); }
+body.kiosk[data-kiosk-cols="6"] { font-size: clamp(11px, 0.28vw + 6px, 16px); }
+body.kiosk[data-kiosk-cols="5"] .printer-grid,
+body.kiosk[data-kiosk-cols="6"] .printer-grid { gap: 1.2vw; }
+/* In "all" mode, healthy printers step back so problems stand out. */
+body.kiosk-all .printer.status-ok:not(.has-service) { opacity: 0.72; }
 body.kiosk .printer { padding: 1.6em; gap: 1.1em; border-radius: 1.4em; font-size: 1em; }
 body.kiosk .printer-head { grid-template-columns: 4.5em minmax(0, 1fr) auto; }
 body.kiosk .printer-photo { width: 4.5em; height: 4.5em; }
@@ -473,7 +481,9 @@ body.kiosk .empty-state p { font-size: 1.3em; }
 .kiosk-bar {
   position: fixed; right: 1.2em; bottom: 1em; z-index: 20;
   display: flex; align-items: center; gap: 0.6em;
-  font-size: 0.8em; color: var(--faint);
+  padding: 0.35em 0.9em; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--line);
+  font-size: 0.8em; color: var(--muted);
 }
 .kiosk-bar[data-mode="stale"] { color: var(--warning); }
 .kiosk-bar[data-mode="error"] { color: var(--critical); font-size: 1.1em; }

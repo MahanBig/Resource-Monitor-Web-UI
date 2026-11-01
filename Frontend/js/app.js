@@ -27,6 +27,14 @@ const DEFAULT_CONFIG = {
 const SERVICE_CACHE_MS = 30000;
 const params = new URLSearchParams(location.search);
 
+/** null (off), "attention" or "all". */
+function kioskMode(value) {
+  const v = String(value ?? "").toLowerCase();
+  if (v === "all") return "all";
+  if (isTruthyFlag(v) || v === "attention") return "attention";
+  return null;
+}
+
 function readJson(text, fallback) {
   try {
     return text ? JSON.parse(text) : fallback;
@@ -41,11 +49,13 @@ const state = {
   demo: isTruthyFlag(params.get("demo")),
   hideConsumables: isTruthyFlag(params.get("ignoreconsumables")),
   summaryOnly: params.get("view") === "summary",
-  // ?kiosk=1 – only the printers that need attention, large, nothing else (wall screens/TVs)
-  kiosk: isTruthyFlag(params.get("kiosk")),
+  // Kiosk mode for wall screens/TVs: large cards and nothing else.
+  //   ?kiosk=1   – only the printers that need attention
+  //   ?kiosk=all – every printer (problems first)
+  kiosk: kioskMode(params.get("kiosk")),
   view: "attention", // "attention" | "all"
   statusFilter: null, // null | "critical" | "warning" | "ok" | "service"
-  search: isTruthyFlag(params.get("kiosk")) ? "" : storage.get("rm_search") || "",
+  search: kioskMode(params.get("kiosk")) ? "" : storage.get("rm_search") || "",
   raw: null,
   printers: [],
   lastSuccess: null,
@@ -376,9 +386,11 @@ function render() {
     state.renderKey = key;
     el.grid.innerHTML = printers.map(printerCard).join("");
     if (state.kiosk) {
-      // Fill a landscape screen: 1 card = 1 column, 2–4 = 2, 5–9 = 3, more = 4.
+      // Fill a landscape screen: 1 card = 1 column, 2–4 = 2, 5–9 = 3, 10–16 = 4, 17–25 = 5, more = 6.
       const n = printers.length;
-      document.body.style.setProperty("--kiosk-cols", String(n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4));
+      const cols = n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : n <= 16 ? 4 : n <= 25 ? 5 : 6;
+      document.body.style.setProperty("--kiosk-cols", String(cols));
+      document.body.dataset.kioskCols = String(cols);
     }
     const alerts = alertsHtml(sortPrinters(state.printers));
     el.alertsList.innerHTML = alerts;
@@ -499,12 +511,12 @@ async function showView(view, push = true) {
 }
 
 /* ---------------------------------------------------------------------------
- * Kiosk mode (?kiosk=1)
+ * Kiosk mode (?kiosk=1 or ?kiosk=all)
  * ------------------------------------------------------------------------- */
 
 function startKiosk() {
-  document.body.classList.add("kiosk");
-  state.view = "attention";
+  document.body.classList.add("kiosk", `kiosk-${state.kiosk}`);
+  state.view = state.kiosk === "all" ? "all" : "attention";
   state.statusFilter = null;
   $("#kioskBar").hidden = false;
 
