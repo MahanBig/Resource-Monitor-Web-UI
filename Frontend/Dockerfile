@@ -1,4 +1,4 @@
-FROM php:8.3-apache
+FROM php:8.5-apache
 
 RUN docker-php-ext-install pdo_mysql \
  && sed -ri 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf \
